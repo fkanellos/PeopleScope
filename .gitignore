@@ -1,15 +1,17 @@
+# Android/IntelliJ/IDEA files
 *.iml
+.idea/*
 .gradle
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+
+# macOS
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+
+# Build folders
+/build/
+/captures/
+/.externalNativeBuild/
+/cxx/
+
+# Local properties (διπλής εγγραφής γιατί συχνά γράφονται και με και χωρίς /)
 local.properties
