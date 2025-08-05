@@ -3,10 +3,13 @@ package gr.pkcoding.peoplescope.data.repository
 import gr.pkcoding.peoplescope.data.local.dao.BookmarkDao
 import gr.pkcoding.peoplescope.data.mapper.*
 import gr.pkcoding.peoplescope.data.remote.api.RandomUserApi
-import gr.pkcoding.peoplescope.domain.model.User
+import gr.pkcoding.peoplescope.domain.model.*
 import gr.pkcoding.peoplescope.domain.repository.UserRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -16,59 +19,67 @@ class UserRepositoryImpl(
     private val bookmarkDao: BookmarkDao
 ) : UserRepository {
 
-    override suspend fun getUsers(page: Int, pageSize: Int): Result<List<User>> {
+    override suspend fun getUsers(page: Int, pageSize: Int): Result<List<User>, DataError> {
         return withContext(Dispatchers.IO) {
             try {
                 val response = api.getUsers(page = page, results = pageSize)
                 val users = response.results.toDomainModels()
 
-                // Check bookmark status for each user
+                // Get bookmarked user IDs
                 val bookmarkedUserIds = bookmarkDao.getAllBookmarkedUsers()
                     .map { entities -> entities.map { it.id } }
 
+                // Update bookmark status for each user
                 val usersWithBookmarkStatus = users.map { user ->
-                    user.copy(isBookmarked = bookmarkedUserIds.map { it.contains(user.id) }.toString().toBoolean())
+                    val isBookmarked = bookmarkDao.getBookmarkedUserById(user.id) != null
+                    user.copy(isBookmarked = isBookmarked)
                 }
 
-                Result.success(users)
+                Result.Success(usersWithBookmarkStatus)
             } catch (e: Exception) {
                 Timber.e(e, "Error fetching users")
-                Result.failure(e)
+                Result.Error(DataError.Network(e.toNetworkError()))
             }
         }
     }
 
-    override suspend fun getUserById(userId: String): Result<User?> {
+    override suspend fun getUserById(userId: String): Result<User, UserError> {
         return withContext(Dispatchers.IO) {
             try {
                 // First check if user is bookmarked
                 val bookmarkedUser = bookmarkDao.getBookmarkedUserById(userId)
                 if (bookmarkedUser != null) {
-                    Result.success(bookmarkedUser.toDomainModel())
+                    Result.Success(bookmarkedUser.toDomainModel())
                 } else {
                     // If not bookmarked, we can't fetch a single user from the API
                     // The Random User API doesn't support fetching by ID
-                    Result.success(null)
+                    Result.Error(UserError.UserNotFound(userId))
                 }
             } catch (e: Exception) {
                 Timber.e(e, "Error getting user by ID")
-                Result.failure(e)
+                Result.Error(UserError.UserNotFound(userId))
             }
         }
     }
 
-    override fun getBookmarkedUsers(): Flow<List<User>> {
+    override fun getBookmarkedUsers(): Flow<Result<List<User>, DataError.Local>> {
         return bookmarkDao.getAllBookmarkedUsers()
             .map { entities ->
-                entities.map { it.toDomainModel() }
+                Result.Success(entities.map { it.toDomainModel() }) as Result<List<User>, DataError.Local>
             }
+            .catch { e ->
+                Timber.e(e, "Error getting bookmarked users")
+                emit(Result.Error(DataError.Local(e.toLocalError())))
+            }
+            .flowOn(Dispatchers.IO)
     }
 
     override fun isUserBookmarked(userId: String): Flow<Boolean> {
         return bookmarkDao.isUserBookmarked(userId)
+            .flowOn(Dispatchers.IO)
     }
 
-    override suspend fun toggleBookmark(user: User): Result<Unit> {
+    override suspend fun toggleBookmark(user: User): Result<Unit, DataError.Local> {
         return withContext(Dispatchers.IO) {
             try {
                 val isBookmarked = bookmarkDao.getBookmarkedUserById(user.id) != null
@@ -79,31 +90,31 @@ class UserRepositoryImpl(
                 }
             } catch (e: Exception) {
                 Timber.e(e, "Error toggling bookmark")
-                Result.failure(e)
+                Result.Error(DataError.Local(e.toLocalError()))
             }
         }
     }
 
-    override suspend fun bookmarkUser(user: User): Result<Unit> {
+    override suspend fun bookmarkUser(user: User): Result<Unit, DataError.Local> {
         return withContext(Dispatchers.IO) {
             try {
                 bookmarkDao.insertBookmarkedUser(user.toBookmarkedEntity())
-                Result.success(Unit)
+                Result.Success(Unit)
             } catch (e: Exception) {
                 Timber.e(e, "Error bookmarking user")
-                Result.failure(e)
+                Result.Error(DataError.Local(e.toLocalError()))
             }
         }
     }
 
-    override suspend fun removeBookmark(userId: String): Result<Unit> {
+    override suspend fun removeBookmark(userId: String): Result<Unit, DataError.Local> {
         return withContext(Dispatchers.IO) {
             try {
                 bookmarkDao.deleteBookmarkedUserById(userId)
-                Result.success(Unit)
+                Result.Success(Unit)
             } catch (e: Exception) {
                 Timber.e(e, "Error removing bookmark")
-                Result.failure(e)
+                Result.Error(DataError.Local(e.toLocalError()))
             }
         }
     }

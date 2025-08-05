@@ -1,3 +1,27 @@
 <resources>
     <string name="app_name">PeopleScope</string>
+    <!-- Error messages -->
+    <string name="error_no_internet">No internet connection. Please check your network settings.</string>
+    <string name="error_timeout">Request timed out. Please try again.</string>
+    <string name="error_server">Server error occurred. Please try again later.</string>
+    <string name="error_parsing">Failed to parse response. Please try again.</string>
+    <string name="error_unknown">An unexpected error occurred. Please try again.</string>
+    <string name="error_disk_full">Storage is full. Please free up some space.</string>
+    <string name="error_database">Database error occurred. Please try again.</string>
+    <string name="error_user_not_found">User with ID %s not found.</string>
+
+    <!-- User list screen -->
+    <string name="users_title">People</string>
+    <string name="retry">Retry</string>
+    <string name="loading">Loading…</string>
+
+    <!-- User detail screen -->
+    <string name="user_details_title">Profile</string>
+    <string name="bookmark">Bookmark</string>
+    <string name="unbookmark">Remove Bookmark</string>
+
+    <!-- Content descriptions for accessibility -->
+    <string name="cd_user_avatar">User avatar</string>
+    <string name="cd_bookmark_icon">Bookmark icon</string>
+    <string name="cd_back_button">Navigate back</string>
 </resources>
