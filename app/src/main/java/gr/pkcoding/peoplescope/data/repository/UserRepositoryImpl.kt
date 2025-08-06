@@ -1,5 +1,6 @@
 package gr.pkcoding.peoplescope.data.repository
 
+import androidx.paging.PagingData
 import gr.pkcoding.peoplescope.data.local.dao.BookmarkDao
 import gr.pkcoding.peoplescope.data.mapper.*
 import gr.pkcoding.peoplescope.data.remote.api.RandomUserApi
@@ -117,5 +118,11 @@ class UserRepositoryImpl(
                 Result.Error(DataError.Local(e.toLocalError()))
             }
         }
+    }
+
+    override fun getUsersPaged(): Flow<PagingData<User>> {
+        return api.getUsersPaged()
+            .map { pagingData -> pagingData.map { it.toDomainModel() } }
+            .flowOn(Dispatchers.IO)
     }
 }

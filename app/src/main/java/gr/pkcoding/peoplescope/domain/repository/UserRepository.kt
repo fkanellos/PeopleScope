@@ -1,5 +1,6 @@
 package gr.pkcoding.peoplescope.domain.repository
 
+import androidx.paging.PagingData
 import gr.pkcoding.peoplescope.domain.model.DataError
 import gr.pkcoding.peoplescope.domain.model.Result
 import gr.pkcoding.peoplescope.domain.model.User
@@ -41,4 +42,6 @@ interface UserRepository {
      * Remove user from bookmarks
      */
     suspend fun removeBookmark(userId: String): Result<Unit, DataError.Local>
+
+    fun getUsersPaged(): Flow<PagingData<User>>
 }

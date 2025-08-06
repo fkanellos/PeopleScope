@@ -10,4 +10,6 @@ sealed class UserListIntent : ViewIntent {
     data class ToggleBookmark(val user: User) : UserListIntent()
     data class NavigateToDetail(val user: User) : UserListIntent()
     object RetryLoadUsers : UserListIntent()
+    object ClearSearch : UserListIntent()
+    data class UpdateSearchQuery(val query: String) : UserListIntent()
 }

@@ -38,6 +38,9 @@ coil = "2.5.0"
 # Logging
 timber = "5.0.1"
 
+# UI
+accompanist = "0.32.0"
+
 # Testing
 junit = "4.13.2"
 androidxJunit = "1.2.1"
@@ -92,6 +95,9 @@ coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
 
 # Logging
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
+
+# UI
+accompanist-swiperefresh = { module = "com.google.accompanist:accompanist-swiperefresh", version.ref = "accompanist" }
 
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }

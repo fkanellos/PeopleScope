@@ -1,0 +1,153 @@
+package gr.pkcoding.peoplescope.presentation.ui.userlist
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemContentType
+import androidx.paging.compose.itemKey
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import gr.pkcoding.peoplescope.R
+import gr.pkcoding.peoplescope.domain.model.User
+import gr.pkcoding.peoplescope.presentation.ui.components.ErrorView
+import gr.pkcoding.peoplescope.presentation.ui.components.GradientBackground
+import gr.pkcoding.peoplescope.presentation.ui.components.LoadingView
+import gr.pkcoding.peoplescope.presentation.ui.components.SearchBar
+import gr.pkcoding.peoplescope.presentation.ui.components.UserCard
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun UserListScreen(
+    state: UserListState,
+    onIntent: (UserListIntent) -> Unit,
+    viewModel: UserListViewModel
+) {
+    val lazyPagingItems = viewModel.getPagedUsersWithBookmarkUpdates().collectAsLazyPagingItems()
+
+    Scaffold(
+        topBar = {
+            Column {
+                TopAppBar(
+                    title = { Text(stringResource(R.string.users_title)) },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                )
+                SearchBar(
+                    query = state.searchQuery,
+                    onQueryChange = { query ->
+                        onIntent(UserListIntent.UpdateSearchQuery(query))
+                    },
+                    onClearClick = {
+                        onIntent(UserListIntent.ClearSearch)
+                    },
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+        }
+    ) { paddingValues ->
+        GradientBackground(
+            modifier = Modifier.padding(paddingValues)
+        ) {
+            SwipeRefresh(
+                state = rememberSwipeRefreshState(
+                    isRefreshing = lazyPagingItems.loadState.refresh is LoadState.Loading
+                ),
+                onRefresh = { lazyPagingItems.refresh() }
+            ) {
+                UserListContent(
+                    lazyPagingItems = lazyPagingItems,
+                    onIntent = onIntent
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun UserListContent(
+    lazyPagingItems: LazyPagingItems<User>,
+    onIntent: (UserListIntent) -> Unit
+) {
+    when {
+        lazyPagingItems.loadState.refresh is LoadState.Loading && lazyPagingItems.itemCount == 0 -> {
+            LoadingView(useShimmer = true)
+        }
+        lazyPagingItems.loadState.refresh is LoadState.Error && lazyPagingItems.itemCount == 0 -> {
+            val error = (lazyPagingItems.loadState.refresh as LoadState.Error).error
+            ErrorView(
+                message = error.localizedMessage ?: "An error occurred",
+                onRetry = { lazyPagingItems.retry() }
+            )
+        }
+        else -> {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(0.dp)
+            ) {
+                items(
+                    count = lazyPagingItems.itemCount,
+                    key = lazyPagingItems.itemKey { it.id },
+                    contentType = lazyPagingItems.itemContentType { "user" }
+                ) { index ->
+                    val user = lazyPagingItems[index]
+                    user?.let {
+                        UserCard(
+                            user = it,
+                            onBookmarkClick = {
+                                onIntent(UserListIntent.ToggleBookmark(it))
+                            },
+                            onClick = {
+                                onIntent(UserListIntent.NavigateToDetail(it))
+                            }
+                        )
+                    }
+                }
+
+                // Loading more indicator
+                when (lazyPagingItems.loadState.append) {
+                    is LoadState.Loading -> {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            }
+                        }
+                    }
+                    is LoadState.Error -> {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                TextButton(onClick = { lazyPagingItems.retry() }) {
+                                    Text("Retry")
+                                }
+                            }
+                        }
+                    }
+                    else -> {}
+                }
+            }
+        }
+    }
+}
