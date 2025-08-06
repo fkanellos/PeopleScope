@@ -1,15 +1,18 @@
 package gr.pkcoding.peoplescope.data.repository
 
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import gr.pkcoding.peoplescope.data.local.dao.BookmarkDao
 import gr.pkcoding.peoplescope.data.mapper.*
+import gr.pkcoding.peoplescope.data.paging.UserPagingSource
 import gr.pkcoding.peoplescope.data.remote.api.RandomUserApi
 import gr.pkcoding.peoplescope.domain.model.*
 import gr.pkcoding.peoplescope.domain.repository.UserRepository
+import gr.pkcoding.peoplescope.utils.Constants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -121,8 +124,18 @@ class UserRepositoryImpl(
     }
 
     override fun getUsersPaged(): Flow<PagingData<User>> {
-        return api.getUsersPaged()
-            .map { pagingData -> pagingData.map { it.toDomainModel() } }
-            .flowOn(Dispatchers.IO)
+        return Pager(
+            config = PagingConfig(
+                pageSize = Constants.PAGE_SIZE,
+                enablePlaceholders = false,
+                initialLoadSize = Constants.PAGE_SIZE
+            ),
+            pagingSourceFactory = {
+                UserPagingSource(
+                    api = api,
+                    bookmarkDao = bookmarkDao
+                )
+            }
+        ).flow.flowOn(Dispatchers.IO)
     }
 }

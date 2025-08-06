@@ -2,6 +2,7 @@ package gr.pkcoding.peoplescope.di
 
 import androidx.room.Room
 import gr.pkcoding.peoplescope.data.local.database.AppDatabase
+import gr.pkcoding.peoplescope.data.paging.UserPagingSource
 import gr.pkcoding.peoplescope.data.remote.NetworkModule
 import gr.pkcoding.peoplescope.data.remote.api.RandomUserApi
 import gr.pkcoding.peoplescope.data.repository.UserRepositoryImpl
@@ -25,6 +26,9 @@ val dataModule = module {
         ).build()
     }
     single { get<AppDatabase>().bookmarkDao() }
+
+    // Paging Source
+    factory { UserPagingSource(get(), get()) }
 
     // Repository
     single<UserRepository> { UserRepositoryImpl(get(), get()) }

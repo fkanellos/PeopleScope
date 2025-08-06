@@ -3,9 +3,12 @@ package gr.pkcoding.peoplescope.presentation.ui.userlist
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
@@ -31,6 +34,24 @@ fun UserListScreen(
     viewModel: UserListViewModel
 ) {
     val lazyPagingItems = viewModel.getPagedUsersWithBookmarkUpdates().collectAsLazyPagingItems()
+    val pullToRefreshState = rememberPullToRefreshState()
+
+// 1. Trigger paging refresh if user pulls to refresh
+    if (pullToRefreshState.isRefreshing) {
+        LaunchedEffect(true) {
+            lazyPagingItems.refresh()
+        }
+    }
+
+// 2. Sync loading state with pullToRefresh UI
+    LaunchedEffect(lazyPagingItems.loadState.refresh) {
+        when (lazyPagingItems.loadState.refresh) {
+            is LoadState.Loading -> pullToRefreshState.startRefresh()
+            else -> pullToRefreshState.endRefresh()
+        }
+    }
+
+
 
     Scaffold(
         topBar = {
@@ -58,16 +79,20 @@ fun UserListScreen(
         GradientBackground(
             modifier = Modifier.padding(paddingValues)
         ) {
-            SwipeRefresh(
-                state = rememberSwipeRefreshState(
-                    isRefreshing = lazyPagingItems.loadState.refresh is LoadState.Loading
-                ),
-                onRefresh = { lazyPagingItems.refresh() }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+//                    .nestedScroll(pullToRefreshState.nestedScrollConnection)
             ) {
                 UserListContent(
                     lazyPagingItems = lazyPagingItems,
                     onIntent = onIntent
                 )
+
+//                PullToRefreshBox(
+//                    state = pullToRefreshState,
+//                    modifier = Modifier.align(Alignment.TopCenter)
+//                )
             }
         }
     }
@@ -126,7 +151,8 @@ private fun UserListContent(
                             ) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.dp
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
@@ -139,7 +165,12 @@ private fun UserListContent(
                                     .padding(16.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                TextButton(onClick = { lazyPagingItems.retry() }) {
+                                TextButton(
+                                    onClick = { lazyPagingItems.retry() },
+                                    colors = ButtonDefaults.textButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.error
+                                    )
+                                ) {
                                     Text("Retry")
                                 }
                             }
