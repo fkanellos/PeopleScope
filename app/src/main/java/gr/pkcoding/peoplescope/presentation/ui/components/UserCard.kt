@@ -15,9 +15,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import gr.pkcoding.peoplescope.domain.model.*
-import gr.pkcoding.peoplescope.presentation.ui.components.BookmarkButton
 import gr.pkcoding.peoplescope.ui.theme.PeopleScopeTheme
 
+@Stable
 @Composable
 fun UserCard(
     user: User,
@@ -25,8 +25,6 @@ fun UserCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val fullName = remember(user.id) { user.name.getFullName() }
-    val locationText = remember(user.id) { "${user.location.city}, ${user.location.country}" }
 
     ElevatedCard(
         shape = RoundedCornerShape(16.dp),
@@ -66,7 +64,7 @@ fun UserCard(
             ) {
 
                 Text(
-                    text = fullName,
+                    text = user.name.getFullName(),
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.Medium
                     ),
@@ -75,7 +73,7 @@ fun UserCard(
                 )
 
                 Text(
-                    text = locationText,
+                    text = "${user.location.city}, ${user.location.country}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

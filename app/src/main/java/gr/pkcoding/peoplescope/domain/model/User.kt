@@ -1,5 +1,8 @@
 package gr.pkcoding.peoplescope.domain.model
 
+import androidx.compose.runtime.Stable
+
+@Stable
 data class User(
     val id: String,
     val gender: String,
@@ -13,7 +16,7 @@ data class User(
     val nationality: String,
     val isBookmarked: Boolean = false
 )
-
+@Stable
 data class Name(
     val title: String,
     val first: String,
@@ -22,12 +25,13 @@ data class Name(
     fun getFullName(): String = "$title $first $last".trim()
 }
 
+@Stable
 data class Picture(
     val large: String,
     val medium: String,
     val thumbnail: String
 )
-
+@Stable
 data class Location(
     val street: Street,
     val city: String,

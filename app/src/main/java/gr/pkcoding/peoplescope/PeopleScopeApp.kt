@@ -50,6 +50,7 @@ class PeopleScopeApp : Application() {
                     .build()
             }
             .crossfade(false) // Disable crossfade for smoother scrolling
+            .respectCacheHeaders(false) // Don't check cache headers for faster loading
             .build()
         Coil.setImageLoader(imageLoader)
     }
