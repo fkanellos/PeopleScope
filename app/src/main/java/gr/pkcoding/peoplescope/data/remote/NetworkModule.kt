@@ -6,12 +6,15 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import timber.log.Timber
 import java.util.concurrent.TimeUnit
 
 object NetworkModule {
 
     fun provideOkHttpClient(): OkHttpClient {
-        val loggingInterceptor = HttpLoggingInterceptor().apply {
+        val loggingInterceptor = HttpLoggingInterceptor { message ->
+            Timber.tag("OkHttp").d(message)
+        }.apply {
             level = if (BuildConfig.DEBUG) {
                 HttpLoggingInterceptor.Level.BODY
             } else {
@@ -25,6 +28,9 @@ object NetworkModule {
             .readTimeout(Constants.NETWORK_TIMEOUT, TimeUnit.SECONDS)
             .writeTimeout(Constants.NETWORK_TIMEOUT, TimeUnit.SECONDS)
             .build()
+            .also {
+                Timber.d("OkHttpClient created with base URL: ${Constants.BASE_URL}")
+            }
     }
 
     fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
@@ -33,5 +39,8 @@ object NetworkModule {
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
+            .also {
+                Timber.d("Retrofit created with base URL: ${Constants.BASE_URL}")
+            }
     }
 }

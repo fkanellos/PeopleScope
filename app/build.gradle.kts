@@ -72,6 +72,7 @@ dependencies {
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
+
     // Compose
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
@@ -80,6 +81,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
 
     // Koin for dependency injection
     implementation(libs.koin.android)
@@ -105,6 +107,7 @@ dependencies {
 
     // Image loading
     implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
 
     // Logging
     implementation(libs.timber)
@@ -131,7 +134,4 @@ dependencies {
     // Debug
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-
-    // UI Libraries
-    implementation(libs.accompanist.swiperefresh)
 }

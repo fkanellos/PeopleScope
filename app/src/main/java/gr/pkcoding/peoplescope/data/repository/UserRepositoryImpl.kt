@@ -26,22 +26,29 @@ class UserRepositoryImpl(
     override suspend fun getUsers(page: Int, pageSize: Int): Result<List<User>, DataError> {
         return withContext(Dispatchers.IO) {
             try {
-                val response = api.getUsers(page = page, results = pageSize)
-                val users = response.results.toDomainModels()
+                Timber.d("Making API call to getUsers(page=$page, pageSize=$pageSize)")
 
-                // Get bookmarked user IDs
-                val bookmarkedUserIds = bookmarkDao.getAllBookmarkedUsers()
-                    .map { entities -> entities.map { it.id } }
+                val response = api.getUsers(page = page, results = pageSize)
+                Timber.d("API response received: ${response.results.size} users")
+
+                val users = response.results.toDomainModels()
+                Timber.d("Mapped to domain: ${users.size} users")
 
                 // Update bookmark status for each user
                 val usersWithBookmarkStatus = users.map { user ->
-                    val isBookmarked = bookmarkDao.getBookmarkedUserById(user.id) != null
+                    val isBookmarked = try {
+                        bookmarkDao.getBookmarkedUserById(user.id) != null
+                    } catch (e: Exception) {
+                        Timber.w(e, "Error checking bookmark status for user ${user.id}")
+                        false
+                    }
                     user.copy(isBookmarked = isBookmarked)
                 }
 
+                Timber.d("Final result: ${usersWithBookmarkStatus.size} users with bookmark status")
                 Result.Success(usersWithBookmarkStatus)
             } catch (e: Exception) {
-                Timber.e(e, "Error fetching users")
+                Timber.e(e, "Error fetching users from API")
                 Result.Error(DataError.Network(e.toNetworkError()))
             }
         }
@@ -124,18 +131,33 @@ class UserRepositoryImpl(
     }
 
     override fun getUsersPaged(): Flow<PagingData<User>> {
+        Timber.d("🚀 Creating paged users flow")
+
         return Pager(
             config = PagingConfig(
                 pageSize = Constants.PAGE_SIZE,
                 enablePlaceholders = false,
-                initialLoadSize = Constants.PAGE_SIZE
+                initialLoadSize = Constants.PAGE_SIZE,
+                prefetchDistance = 1, // Reduced from 3 to minimize background loading
+                maxSize = Constants.PAGE_SIZE * 10 // Limit memory usage
             ),
             pagingSourceFactory = {
-                UserPagingSource(
-                    api = api,
-                    bookmarkDao = bookmarkDao
-                )
+                Timber.d("🔥 Creating new UserPagingSource")
+                UserPagingSource(api = api, bookmarkDao = bookmarkDao)
             }
         ).flow.flowOn(Dispatchers.IO)
+    }
+
+    // Debug method - test direct API call
+    suspend fun testApiCall(): String {
+        return withContext(Dispatchers.IO) {
+            try {
+                Timber.d("Testing direct API call...")
+                val response = api.getUsers(page = 1, results = 5)
+                "SUCCESS: Got ${response.results.size} users. First user: ${response.results.firstOrNull()?.name?.first}"
+            } catch (e: Exception) {
+                "ERROR: ${e.message}"
+            }
+        }
     }
 }

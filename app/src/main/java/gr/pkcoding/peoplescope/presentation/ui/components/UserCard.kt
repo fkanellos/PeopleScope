@@ -25,6 +25,9 @@ fun UserCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val fullName = remember(user.id) { user.name.getFullName() }
+    val locationText = remember(user.id) { "${user.location.city}, ${user.location.country}" }
+
     ElevatedCard(
         shape = RoundedCornerShape(16.dp),
         modifier = modifier
@@ -47,7 +50,7 @@ fun UserCard(
         ) {
             // Avatar
             AsyncImage(
-                model = user.picture.medium,
+                model = user.picture.thumbnail,
                 contentDescription = "${user.name.getFullName()} avatar",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
@@ -61,8 +64,9 @@ fun UserCard(
             Column(
                 modifier = Modifier.weight(1f)
             ) {
+
                 Text(
-                    text = user.name.getFullName(),
+                    text = fullName,
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.Medium
                     ),
@@ -71,7 +75,7 @@ fun UserCard(
                 )
 
                 Text(
-                    text = "${user.location.city}, ${user.location.country}",
+                    text = locationText,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

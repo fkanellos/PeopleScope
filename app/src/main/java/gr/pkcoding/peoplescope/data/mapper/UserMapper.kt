@@ -1,16 +1,27 @@
 package gr.pkcoding.peoplescope.data.mapper
+
 import gr.pkcoding.peoplescope.data.local.entity.BookmarkedUserEntity
 import gr.pkcoding.peoplescope.data.remote.dto.*
 import gr.pkcoding.peoplescope.domain.model.*
+import timber.log.Timber
 
 /**
  * Maps UserDto from API to domain User model
  */
 fun UserDto.toDomainModel(): User? {
     return try {
+        // Log the incoming DTO for debugging
+        Timber.d("Mapping UserDto: login.uuid=${login?.uuid}, name=${name?.first} ${name?.last}")
+
+        val userId = login?.uuid
+        if (userId == null) {
+            Timber.w("UserDto missing login.uuid, skipping user: ${name?.first} ${name?.last}")
+            return null
+        }
+
         User(
-            id = login?.uuid ?: return null,
-            gender = gender ?: "",
+            id = userId,
+            gender = gender ?: "unknown",
             name = Name(
                 title = name?.title ?: "",
                 first = name?.first ?: "",
@@ -48,8 +59,11 @@ fun UserDto.toDomainModel(): User? {
             ),
             nationality = nat ?: "",
             isBookmarked = false
-        )
+        ).also {
+            Timber.d("Successfully mapped user: ${it.id} - ${it.name.getFullName()}")
+        }
     } catch (e: Exception) {
+        Timber.e(e, "Error mapping UserDto: ${name?.first} ${name?.last}")
         null
     }
 }
@@ -58,7 +72,14 @@ fun UserDto.toDomainModel(): User? {
  * Maps list of UserDto to list of domain User models
  */
 fun List<UserDto>.toDomainModels(): List<User> {
-    return this.mapNotNull { it.toDomainModel() }
+    Timber.d("Mapping ${this.size} UserDto objects")
+
+    val users = this.mapNotNull { userDto ->
+        userDto.toDomainModel()
+    }
+
+    Timber.d("Successfully mapped ${users.size} out of ${this.size} users")
+    return users
 }
 
 /**

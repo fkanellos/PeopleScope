@@ -1,6 +1,10 @@
 package gr.pkcoding.peoplescope
 
 import android.app.Application
+import coil.Coil
+import coil.ImageLoader
+import coil.disk.DiskCache
+import coil.memory.MemoryCache
 import gr.pkcoding.peoplescope.di.appModule
 import gr.pkcoding.peoplescope.di.dataModule
 import gr.pkcoding.peoplescope.di.domainModule
@@ -32,5 +36,21 @@ class PeopleScopeApp : Application() {
                 presentationModule
             )
         }
+        // Configure Coil for better performance
+        val imageLoader = ImageLoader.Builder(this)
+            .memoryCache {
+                MemoryCache.Builder(this)
+                    .maxSizePercent(0.25) // Use 25% of app memory for images
+                    .build()
+            }
+            .diskCache {
+                DiskCache.Builder()
+                    .directory(this.cacheDir.resolve("image_cache"))
+                    .maxSizeBytes(50 * 1024 * 1024) // 50MB disk cache
+                    .build()
+            }
+            .crossfade(false) // Disable crossfade for smoother scrolling
+            .build()
+        Coil.setImageLoader(imageLoader)
     }
 }

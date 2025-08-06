@@ -26,10 +26,6 @@ class UserRepositoryImplTest {
     private val testUserDto = UserDto(
         gender = "male",
         name = NameDto("Mr", "John", "Doe"),
-        email = "john.doe@example.com",
-        phone = "+1234567890",
-        cell = "+0987654321",
-        picture = PictureDto("large.jpg", "medium.jpg", "thumbnail.jpg"),
         location = LocationDto(
             street = StreetDto(123, "Main St"),
             city = "New York",
@@ -39,10 +35,22 @@ class UserRepositoryImplTest {
             coordinates = CoordinatesDto("40.7128", "-74.0060"),
             timezone = TimezoneDto("-5:00", "Eastern Time")
         ),
+        email = "john.doe@example.com",
+        login = LoginDto(
+            uuid = "test-uuid",
+            username = "johndoe123",
+            password = "password123",
+            salt = "salt123",
+            md5 = "md5hash",
+            sha1 = "sha1hash",
+            sha256 = "sha256hash"
+        ),
         dob = DobDto("1990-01-01T00:00:00.000Z", 33),
-        login = LoginDto(uuid = "test-uuid"),
-        registered = null,
-        id = null,
+        registered = RegisteredDto("2020-01-01T00:00:00.000Z", 5),
+        phone = "+1234567890",
+        cell = "+0987654321",
+        id = IdDto("SSN", "123-45-6789"),
+        picture = PictureDto("large.jpg", "medium.jpg", "thumbnail.jpg"),
         nat = "US"
     )
 

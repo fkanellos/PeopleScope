@@ -4,20 +4,19 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
-import com.google.accompanist.swiperefresh.SwipeRefresh
-import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import gr.pkcoding.peoplescope.R
 import gr.pkcoding.peoplescope.domain.model.User
 import gr.pkcoding.peoplescope.presentation.ui.components.ErrorView
@@ -25,6 +24,7 @@ import gr.pkcoding.peoplescope.presentation.ui.components.GradientBackground
 import gr.pkcoding.peoplescope.presentation.ui.components.LoadingView
 import gr.pkcoding.peoplescope.presentation.ui.components.SearchBar
 import gr.pkcoding.peoplescope.presentation.ui.components.UserCard
+import timber.log.Timber
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,25 +33,20 @@ fun UserListScreen(
     onIntent: (UserListIntent) -> Unit,
     viewModel: UserListViewModel
 ) {
-    val lazyPagingItems = viewModel.getPagedUsersWithBookmarkUpdates().collectAsLazyPagingItems()
-    val pullToRefreshState = rememberPullToRefreshState()
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
 
-// 1. Trigger paging refresh if user pulls to refresh
-    if (pullToRefreshState.isRefreshing) {
-        LaunchedEffect(true) {
-            lazyPagingItems.refresh()
-        }
+    // 🔥 USE THE PROPERTY DIRECTLY - NOT A FUNCTION!
+    val lazyPagingItems = remember(viewModel) {
+        viewModel.pagedUsersWithUpdates
+    }.collectAsLazyPagingItems()
+
+    // Add lifecycle awareness to pause data loading when app goes to background
+    LaunchedEffect(lifecycle) {
+        Timber.d("🔄 UserListScreen lifecycle changed")
     }
 
-// 2. Sync loading state with pullToRefresh UI
-    LaunchedEffect(lazyPagingItems.loadState.refresh) {
-        when (lazyPagingItems.loadState.refresh) {
-            is LoadState.Loading -> pullToRefreshState.startRefresh()
-            else -> pullToRefreshState.endRefresh()
-        }
-    }
-
-
+    // Determine if we should show refresh indicator
+    val isRefreshing = lazyPagingItems.loadState.refresh is LoadState.Loading
 
     Scaffold(
         topBar = {
@@ -79,20 +74,18 @@ fun UserListScreen(
         GradientBackground(
             modifier = Modifier.padding(paddingValues)
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-//                    .nestedScroll(pullToRefreshState.nestedScrollConnection)
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = {
+                    Timber.d("🔄 Pull to refresh triggered")
+                    lazyPagingItems.refresh()
+                },
+                modifier = Modifier.fillMaxSize()
             ) {
                 UserListContent(
                     lazyPagingItems = lazyPagingItems,
                     onIntent = onIntent
                 )
-
-//                PullToRefreshBox(
-//                    state = pullToRefreshState,
-//                    modifier = Modifier.align(Alignment.TopCenter)
-//                )
             }
         }
     }
@@ -105,16 +98,19 @@ private fun UserListContent(
 ) {
     when {
         lazyPagingItems.loadState.refresh is LoadState.Loading && lazyPagingItems.itemCount == 0 -> {
+            Timber.d("📱 Showing loading state")
             LoadingView(useShimmer = true)
         }
         lazyPagingItems.loadState.refresh is LoadState.Error && lazyPagingItems.itemCount == 0 -> {
             val error = (lazyPagingItems.loadState.refresh as LoadState.Error).error
+            Timber.e("❌ Showing error state: ${error.message}")
             ErrorView(
                 message = error.localizedMessage ?: "An error occurred",
                 onRetry = { lazyPagingItems.retry() }
             )
         }
         else -> {
+            Timber.d("📋 Showing user list: ${lazyPagingItems.itemCount} items")
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(vertical = 8.dp),
