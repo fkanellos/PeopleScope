@@ -14,6 +14,5 @@ object Constants {
     const val NAV_USER_ID_KEY = "userId"
 
     // Network
-    const val NETWORK_TIMEOUT = 30L // seconds
-    const val CACHE_SIZE = 10 * 1024 * 1024L // 10 MB
+    const val NETWORK_TIMEOUT = 30L
 }

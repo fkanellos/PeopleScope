@@ -179,16 +179,4 @@ class UserRepositoryImpl(
             .flowOn(Dispatchers.IO)
     }
 
-    // Debug method - test direct API call
-    suspend fun testApiCall(): String {
-        return withContext(Dispatchers.IO) {
-            try {
-                Timber.d("Testing direct API call...")
-                val response = api.getUsers(page = 1, results = 5)
-                "SUCCESS: Got ${response.results.size} users. First user: ${response.results.firstOrNull()?.name?.first}"
-            } catch (e: Exception) {
-                "ERROR: ${e.message}"
-            }
-        }
-    }
 }

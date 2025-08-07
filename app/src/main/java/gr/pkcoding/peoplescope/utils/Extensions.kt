@@ -4,8 +4,8 @@ import android.content.Context
 import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.flow.Flow
 import java.text.SimpleDateFormat
@@ -15,7 +15,7 @@ import java.util.*
  * Extension function to collect Flow safely in Composables
  */
 @Composable
-fun <T> Flow<T>.collectAsEffect(
+fun <T> Flow<T>.CollectAsEffect(
     key: Any? = null,
     block: suspend (T) -> Unit
 ) {
@@ -41,14 +41,6 @@ fun String.formatDate(): String {
     }
 }
 
-/**
- * Capitalize first letter of each word
- */
-fun String.capitalizeWords(): String {
-    return split(" ").joinToString(" ") { word ->
-        word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-    }
-}
 
 /**
  * Show toast message

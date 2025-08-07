@@ -1,6 +1,5 @@
 package gr.pkcoding.peoplescope.presentation.ui.userdetail
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -32,7 +31,6 @@ import gr.pkcoding.peoplescope.presentation.ui.components.ErrorView
 import gr.pkcoding.peoplescope.presentation.ui.components.GradientBackground
 import gr.pkcoding.peoplescope.presentation.ui.components.LoadingView
 import gr.pkcoding.peoplescope.ui.theme.PeopleScopeTheme
-import gr.pkcoding.peoplescope.utils.capitalizeWords
 import gr.pkcoding.peoplescope.utils.formatDate
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -113,7 +111,6 @@ private fun UserDetailContent(
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Avatar
                 Box {
                     AsyncImage(
                         model = user.picture.large,
@@ -124,7 +121,6 @@ private fun UserDetailContent(
                             .clip(CircleShape)
                     )
 
-                    // Gender Badge
                     Surface(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
@@ -144,14 +140,12 @@ private fun UserDetailContent(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Name
                 Text(
                     text = user.name.getFullName(),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
 
-                // Age
                 Text(
                     text = "${user.dob.age} years old",
                     style = MaterialTheme.typography.bodyMedium,
@@ -160,7 +154,6 @@ private fun UserDetailContent(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Bookmark Button
                 BookmarkButton(
                     isBookmarked = isBookmarked,
                     onClick = onBookmarkClick,

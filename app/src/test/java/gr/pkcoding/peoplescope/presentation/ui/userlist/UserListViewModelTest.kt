@@ -1,12 +1,10 @@
 package gr.pkcoding.peoplescope.presentation.ui.userlist
 
 import androidx.paging.PagingData
-import androidx.paging.testing.asSnapshot
 import gr.pkcoding.peoplescope.data.local.dao.BookmarkDao
 import gr.pkcoding.peoplescope.domain.model.*
 import gr.pkcoding.peoplescope.domain.usecase.GetUsersPagedUseCase
 import gr.pkcoding.peoplescope.domain.usecase.ToggleBookmarkUseCase
-import gr.pkcoding.peoplescope.presentation.UiText
 import io.mockk.*
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.Dispatchers
@@ -98,11 +96,9 @@ class UserListViewModelTest {
 
     @Test
     fun `clearSearch should reset search query`() = testScope.runTest {
-        // First set a search query
         viewModel.processIntent(UserListIntent.UpdateSearchQuery("test"))
         advanceUntilIdle()
 
-        // Then clear it
         viewModel.processIntent(UserListIntent.ClearSearch)
         advanceUntilIdle()
 
@@ -151,11 +147,9 @@ class UserListViewModelTest {
 
         every { getUsersPagedUseCase() } returns flowOf(PagingData.from(users))
 
-        // Set search query
         viewModel.processIntent(UserListIntent.UpdateSearchQuery("John"))
         advanceUntilIdle()
 
-        // Verify search query is in state
         val state = viewModel.state.first()
         assertEquals("John", state.searchQuery)
     }

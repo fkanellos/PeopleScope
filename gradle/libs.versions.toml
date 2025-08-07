@@ -6,15 +6,15 @@ ksp = "2.0.21-1.0.28"
 
 # Core Android
 coreKtx = "1.16.0"
-lifecycleRuntimeKtx = "2.9.1"
+lifecycleRuntimeKtx = "2.9.2"
 activityCompose = "1.10.1"
 
 # Compose
-composeBom = "2024.09.00"
+composeBom = "2024.12.01"
 composeCompiler = "1.5.8"
 
 # Navigation
-navigationCompose = "2.7.7"
+navigationCompose = "2.8.5"
 
 # DI
 koin = "3.5.3"

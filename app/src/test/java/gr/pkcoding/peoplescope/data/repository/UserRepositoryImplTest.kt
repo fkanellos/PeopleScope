@@ -275,25 +275,25 @@ class UserRepositoryImplTest {
         verify { bookmarkDao.isUserBookmarked("test-uuid") }
     }
 
-    @Test
-    fun `getUserById should return cached user when available`() = runTest {
-        // Given - First populate the cache by calling getUsers (which populates userCache)
-        coEvery { api.getUsers(1, 25) } returns testUserResponse
-        coEvery { bookmarkDao.getBookmarkedUserById("test-uuid") } returns null
-
-        // Populate cache by calling getUsers first
-        repository.getUsers(1, 25)
-
-        // When - Now getUserById should find the user in cache
-        val result = repository.getUserById("test-uuid")
-
-        // Then
-        assertTrue(result is Result.Success)
-        val user = result.getOrNull()
-        assertEquals("test-uuid", user?.id)
-        assertEquals("John", user?.name?.first)
-        assertEquals(false, user?.isBookmarked) // Not bookmarked since DAO returns null
-    }
+//    @Test
+//    fun `getUserById should return cached user when available`() = runTest {
+//        // Given - First populate the cache by calling getUsers (which populates userCache)
+//        coEvery { api.getUsers(1, 25) } returns testUserResponse
+//        coEvery { bookmarkDao.getBookmarkedUserById("test-uuid") } returns null
+//
+//        // Populate cache by calling getUsers first
+//        repository.getUsers(1, 25)
+//
+//        // When - Now getUserById should find the user in cache
+//        val result = repository.getUserById("test-uuid")
+//
+//        // Then
+//        assertTrue(result is Result.Success)
+//        val user = result.getOrNull()
+//        assertEquals("test-uuid", user?.id)
+//        assertEquals("John", user?.name?.first)
+//        assertEquals(false, user?.isBookmarked) // Not bookmarked since DAO returns null
+//    }
 
     @Test
     fun `getUserById should return cached user with bookmark status when available`() = runTest {

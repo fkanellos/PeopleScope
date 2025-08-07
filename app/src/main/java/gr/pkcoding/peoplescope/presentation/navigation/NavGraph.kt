@@ -1,7 +1,6 @@
 package gr.pkcoding.peoplescope.presentation.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
@@ -18,7 +17,8 @@ import gr.pkcoding.peoplescope.presentation.ui.userdetail.UserDetailViewModel
 import gr.pkcoding.peoplescope.presentation.ui.userlist.UserListEffect
 import gr.pkcoding.peoplescope.presentation.ui.userlist.UserListScreen
 import gr.pkcoding.peoplescope.presentation.ui.userlist.UserListViewModel
-import gr.pkcoding.peoplescope.utils.collectAsEffect
+import gr.pkcoding.peoplescope.utils.CollectAsEffect
+import gr.pkcoding.peoplescope.utils.Constants
 import gr.pkcoding.peoplescope.utils.showToast
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -40,7 +40,7 @@ fun PeopleScopeNavGraph(
             // Debounce state for toast messages
             var lastToastTime by remember { mutableLongStateOf(0L) }
 
-            viewModel.effect.collectAsEffect { effect ->
+            viewModel.effect.CollectAsEffect { effect ->
                 when (effect) {
                     is UserListEffect.NavigateToUserDetail -> {
                         Timber.d("🚀 Navigating to user detail: ${effect.user.id}")
@@ -77,12 +77,12 @@ fun PeopleScopeNavGraph(
         }
 
         composable(route = Destinations.UserDetail.route) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getString("userId") ?: return@composable
+            val userId = backStackEntry.arguments?.getString(Constants.NAV_USER_ID_KEY) ?: return@composable
             val viewModel: UserDetailViewModel = koinViewModel(parameters = { parametersOf(userId) })
             val state by viewModel.state.collectAsStateWithLifecycle()
             val context = LocalContext.current
 
-            viewModel.effect.collectAsEffect { effect ->
+            viewModel.effect.CollectAsEffect { effect ->
                 when (effect) {
                     is UserDetailEffect.NavigateBack -> {
                         navController.popBackStack()
