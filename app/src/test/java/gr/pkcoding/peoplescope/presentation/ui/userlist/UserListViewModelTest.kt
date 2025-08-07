@@ -2,6 +2,7 @@ package gr.pkcoding.peoplescope.presentation.ui.userlist
 
 import androidx.paging.PagingData
 import androidx.paging.testing.asSnapshot
+import gr.pkcoding.peoplescope.data.local.dao.BookmarkDao
 import gr.pkcoding.peoplescope.domain.model.*
 import gr.pkcoding.peoplescope.domain.usecase.GetUsersPagedUseCase
 import gr.pkcoding.peoplescope.domain.usecase.ToggleBookmarkUseCase
@@ -29,6 +30,7 @@ class UserListViewModelTest {
     private lateinit var getUsersPagedUseCase: GetUsersPagedUseCase
     private lateinit var toggleBookmarkUseCase: ToggleBookmarkUseCase
     private lateinit var viewModel: UserListViewModel
+    private lateinit var bookmarkDao: BookmarkDao
 
     private val testUser = User(
         id = "test-id",
@@ -58,12 +60,16 @@ class UserListViewModelTest {
 
         getUsersPagedUseCase = mockk()
         toggleBookmarkUseCase = mockk()
+        bookmarkDao = mockk()
+
+        every { bookmarkDao.getAllBookmarkedUsers() } returns flowOf(emptyList())
 
         every { getUsersPagedUseCase() } returns flowOf(PagingData.from(listOf(testUser)))
 
         viewModel = UserListViewModel(
             getUsersPagedUseCase = getUsersPagedUseCase,
-            toggleBookmarkUseCase = toggleBookmarkUseCase
+            toggleBookmarkUseCase = toggleBookmarkUseCase,
+            bookmarkDao = bookmarkDao
         )
     }
 
