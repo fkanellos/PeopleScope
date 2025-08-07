@@ -5,6 +5,7 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.filter
 import androidx.paging.map
+import gr.pkcoding.peoplescope.data.local.dao.BookmarkDao
 import gr.pkcoding.peoplescope.domain.model.User
 import gr.pkcoding.peoplescope.domain.usecase.GetUsersPagedUseCase
 import gr.pkcoding.peoplescope.domain.usecase.ToggleBookmarkUseCase
@@ -16,13 +17,29 @@ import timber.log.Timber
 
 class UserListViewModel(
     private val getUsersPagedUseCase: GetUsersPagedUseCase,
-    private val toggleBookmarkUseCase: ToggleBookmarkUseCase
+    private val toggleBookmarkUseCase: ToggleBookmarkUseCase,
+    private val bookmarkDao: BookmarkDao
 ) : BaseViewModel<UserListState, UserListIntent, UserListEffect>(
     UserListState()
 ) {
 
-    // Track bookmarked user IDs for real-time updates
+    // Track bookmarked user IDs for real-time updates - observe from database
     private val _bookmarkedUserIds = MutableStateFlow<Set<String>>(emptySet())
+
+    init {
+        Timber.d("🚀 UserListViewModel initialized")
+
+        // Observe database changes from ALL sources (list + detail screens)
+        viewModelScope.launch {
+            // Get all bookmarked users from database and map to IDs
+            // This will update whenever ANY screen changes bookmarks
+            bookmarkDao.getAllBookmarkedUsers().collect { bookmarkedUsers ->
+                val bookmarkedIds = bookmarkedUsers.map { it.id }.toSet()
+                Timber.d("📊 Database bookmark update: ${bookmarkedIds.size} bookmarks")
+                _bookmarkedUserIds.value = bookmarkedIds
+            }
+        }
+    }
 
     // Base paging data flow
     private val pagedUsers: Flow<PagingData<User>> = getUsersPagedUseCase()
@@ -91,24 +108,19 @@ class UserListViewModel(
     }
 
     private fun toggleBookmark(user: User) {
-        Timber.d("⭐ Toggling bookmark for user: ${user.name.getFullName()}")
+        Timber.d("⭐ Toggling bookmark for user: ${user.name.getFullName()}, current state: ${user.isBookmarked}")
 
         viewModelScope.launch {
             toggleBookmarkUseCase(user).fold(
                 onSuccess = {
-                    Timber.d("✅ Successfully toggled bookmark for user: ${user.id}")
-                    // Update local bookmarked state
-                    _bookmarkedUserIds.update { ids ->
-                        if (user.isBookmarked) {
-                            ids - user.id
-                        } else {
-                            ids + user.id
-                        }
-                    }
-                    sendEffect(UserListEffect.ShowBookmarkToggled(!user.isBookmarked))
+                    val newBookmarkState = !user.isBookmarked
+                    Timber.d("✅ Successfully toggled bookmark for user: ${user.id}, new state: $newBookmarkState")
+
+                    // Remove manual state update - database observer will handle this
+                    sendEffect(UserListEffect.ShowBookmarkToggled(newBookmarkState))
                 },
                 onError = { error ->
-                    Timber.e("❌ Error toggling bookmark: $error")
+                    Timber.e("❌ Error toggling bookmark for user ${user.id}: $error")
                     sendEffect(UserListEffect.ShowError(error.toUiText()))
                 }
             )

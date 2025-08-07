@@ -10,6 +10,7 @@ import gr.pkcoding.peoplescope.presentation.toUiText
 import gr.pkcoding.peoplescope.presentation.ui.userlist.fold
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 class UserDetailViewModel(
     private val userId: String,
@@ -61,9 +62,14 @@ class UserDetailViewModel(
         val currentUser = state.value.user ?: return
 
         viewModelScope.launch {
+            Timber.d("⭐ Detail screen: Toggling bookmark for ${currentUser.name.getFullName()}")
+
             toggleBookmarkUseCase(currentUser).fold(
                 onSuccess = {
                     val newBookmarkStatus = !state.value.isBookmarked
+                    Timber.d("✅ Detail screen: Successfully toggled bookmark, new state: $newBookmarkStatus")
+
+                    // Update local state immediately for UI responsiveness
                     updateState {
                         copy(
                             user = user?.copy(isBookmarked = newBookmarkStatus),
@@ -71,8 +77,11 @@ class UserDetailViewModel(
                         )
                     }
                     sendEffect(UserDetailEffect.ShowBookmarkToggled(newBookmarkStatus))
+
+                    // Database update will automatically sync with UserList via Flow observer
                 },
                 onError = { error ->
+                    Timber.e("❌ Detail screen: Error toggling bookmark: $error")
                     sendEffect(UserDetailEffect.ShowError(error.toUiText()))
                 }
             )

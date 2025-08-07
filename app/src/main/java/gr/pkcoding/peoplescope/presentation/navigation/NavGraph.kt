@@ -3,6 +3,9 @@ package gr.pkcoding.peoplescope.presentation.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
@@ -19,6 +22,7 @@ import gr.pkcoding.peoplescope.utils.collectAsEffect
 import gr.pkcoding.peoplescope.utils.showToast
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
+import timber.log.Timber
 
 @Composable
 fun PeopleScopeNavGraph(
@@ -33,23 +37,34 @@ fun PeopleScopeNavGraph(
             val state by viewModel.state.collectAsStateWithLifecycle()
             val context = LocalContext.current
 
+            // Debounce state for toast messages
+            var lastToastTime by remember { mutableLongStateOf(0L) }
+
             viewModel.effect.collectAsEffect { effect ->
                 when (effect) {
                     is UserListEffect.NavigateToUserDetail -> {
+                        Timber.d("🚀 Navigating to user detail: ${effect.user.id}")
                         navController.navigate(
                             Destinations.UserDetail.createRoute(effect.user.id)
                         )
                     }
                     is UserListEffect.ShowError -> {
+                        Timber.e("❌ Showing error: ${effect.message}")
                         context.showToast(effect.message.asString(context))
                     }
                     is UserListEffect.ShowBookmarkToggled -> {
-                        val message = if (effect.isBookmarked) {
-                            "User bookmarked successfully"
-                        } else {
-                            "Bookmark removed"
+                        // Debounce toast messages (500ms)
+                        val currentTime = System.currentTimeMillis()
+                        if (currentTime - lastToastTime > 500) {
+                            val message = if (effect.isBookmarked) {
+                                "User bookmarked ⭐"
+                            } else {
+                                "Bookmark removed"
+                            }
+                            Timber.d("📱 Showing bookmark toast: $message")
+                            context.showToast(message)
+                            lastToastTime = currentTime
                         }
-                        context.showToast(message)
                     }
                 }
             }
