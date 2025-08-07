@@ -37,16 +37,23 @@ fun PeopleScopeNavGraph(
             val state by viewModel.state.collectAsStateWithLifecycle()
             val context = LocalContext.current
 
-            // Debounce state for toast messages
+            // Debounce state για toast messages
             var lastToastTime by remember { mutableLongStateOf(0L) }
 
             viewModel.effect.CollectAsEffect { effect ->
                 when (effect) {
                     is UserListEffect.NavigateToUserDetail -> {
-                        Timber.d("🚀 Navigating to user detail: ${effect.user.id}")
-                        navController.navigate(
-                            Destinations.UserDetail.createRoute(effect.user.id)
-                        )
+                        // ✅ Safe navigation με null check
+                        val userId = effect.user.id
+                        if (!userId.isNullOrBlank()) {
+                            Timber.d("🚀 Navigating to user detail: $userId")
+                            navController.navigate(
+                                Destinations.UserDetail.createRoute(userId)
+                            )
+                        } else {
+                            Timber.w("❌ Cannot navigate: user ID is null")
+                            context.showToast("Cannot view details for this user")
+                        }
                     }
                     is UserListEffect.ShowError -> {
                         Timber.e("❌ Showing error: ${effect.message}")
@@ -77,7 +84,9 @@ fun PeopleScopeNavGraph(
         }
 
         composable(route = Destinations.UserDetail.route) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getString(Constants.NAV_USER_ID_KEY) ?: return@composable
+            val userId = backStackEntry.arguments?.getString(Constants.NAV_USER_ID_KEY)
+                ?: return@composable
+
             val viewModel: UserDetailViewModel = koinViewModel(parameters = { parametersOf(userId) })
             val state by viewModel.state.collectAsStateWithLifecycle()
             val context = LocalContext.current

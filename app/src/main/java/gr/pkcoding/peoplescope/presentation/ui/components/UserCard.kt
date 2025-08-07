@@ -25,6 +25,17 @@ fun UserCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    if (!user.isValid()) {
+        return
+    }
+
+    val displayName = remember(user.name) { user.getDisplayName() }
+    val locationText = remember(user.location) {
+        user.location?.getDisplayLocation() ?: "Unknown location"
+    }
+    val avatarUrl = remember(user.picture) {
+        user.picture?.thumbnail ?: user.picture?.medium
+    }
 
     ElevatedCard(
         shape = RoundedCornerShape(16.dp),
@@ -46,10 +57,10 @@ fun UserCard(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Avatar
+            // ✅ Avatar με better error handling
             AsyncImage(
-                model = user.picture.thumbnail,
-                contentDescription = "${user.name.getFullName()} avatar",
+                model = avatarUrl,
+                contentDescription = "$displayName avatar",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .size(56.dp)
@@ -59,12 +70,9 @@ fun UserCard(
             Spacer(modifier = Modifier.width(12.dp))
 
             // User Info
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = user.name.getFullName(),
+                    text = displayName,
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.Medium
                     ),
@@ -73,7 +81,7 @@ fun UserCard(
                 )
 
                 Text(
-                    text = "${user.location.city}, ${user.location.country}",
+                    text = locationText,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

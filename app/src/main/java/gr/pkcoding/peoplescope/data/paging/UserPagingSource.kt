@@ -3,12 +3,15 @@ package gr.pkcoding.peoplescope.data.paging
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import gr.pkcoding.peoplescope.data.local.dao.BookmarkDao
+import gr.pkcoding.peoplescope.data.mapper.toDomainModel
 import gr.pkcoding.peoplescope.data.mapper.toDomainModels
 import gr.pkcoding.peoplescope.data.remote.api.RandomUserApi
 import gr.pkcoding.peoplescope.domain.model.User
 import gr.pkcoding.peoplescope.utils.Constants
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeout
 import timber.log.Timber
+import java.util.concurrent.TimeoutException
 
 class UserPagingSource(
     private val api: RandomUserApi,
@@ -25,50 +28,39 @@ class UserPagingSource(
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, User> {
         val page = params.key ?: Constants.INITIAL_PAGE
 
-        Timber.d("🔄 Loading page: $page, loadSize: ${params.loadSize}")
-
         return try {
-            // Make API call
-            val response = api.getUsers(
-                page = page,
-                results = params.loadSize
-            )
+            withTimeout(Constants.API_TIMEOUT) {
+                val response = api.getUsers(page = page, results = params.loadSize)
 
-            Timber.d("✅ API response: ${response.results.size} users received")
+                // Efficient mapping and validation
+                val users = response.results
+                    .asSequence()
+                    .mapNotNull { it.toDomainModel() }
+                    .filter { it.isValid() }
+                    .toList()
 
-            // Map to domain models
-            val users = response.results.toDomainModels()
+                // Batch bookmark status check
+                val bookmarkedIds = try {
+                    bookmarkDao.getBookmarkedUserIds().toSet()
+                } catch (e: Exception) {
+                    Timber.w(e, "Failed to get bookmarked IDs")
+                    emptySet()
+                }
 
-            Timber.d("✅ Mapped users: ${users.size} users after mapping")
+                val usersWithBookmarks = users.map { user ->
+                    val isBookmarked = user.id?.let { it in bookmarkedIds } ?: false
+                    user.copy(isBookmarked = isBookmarked)
+                }
 
-            if (users.isEmpty()) {
-                Timber.w("⚠️ No users after mapping! Check UserDto.toDomainModel()")
+                LoadResult.Page(
+                    data = usersWithBookmarks,
+                    prevKey = if (page == Constants.INITIAL_PAGE) null else page - 1,
+                    nextKey = if (usersWithBookmarks.isEmpty()) null else page + 1
+                )
             }
-
-            // Get bookmarked user IDs - but don't use .first() to avoid blocking
-            val bookmarkedUserIds = try {
-                // Use a simple suspend call instead of collecting Flow
-                val bookmarkedUsers = bookmarkDao.getAllBookmarkedUsers().first()
-                bookmarkedUsers.map { it.id }.toSet()
-            } catch (e: Exception) {
-                Timber.w(e, "Failed to get bookmarked users, using empty set")
-                emptySet()
-            }
-
-            // Update bookmark status for each user
-            val usersWithBookmarkStatus = users.map { user ->
-                user.copy(isBookmarked = user.id in bookmarkedUserIds)
-            }
-
-            LoadResult.Page(
-                data = usersWithBookmarkStatus,
-                prevKey = if (page == Constants.INITIAL_PAGE) null else page - 1,
-                nextKey = if (usersWithBookmarkStatus.isEmpty()) null else page + 1
-            ).also {
-                Timber.d("✅ Returning ${usersWithBookmarkStatus.size} users for page $page")
-            }
+        } catch (e: TimeoutException) {
+            LoadResult.Error(e)
         } catch (e: Exception) {
-            Timber.e(e, "❌ Error loading users page: $page")
             LoadResult.Error(e)
         }
     }

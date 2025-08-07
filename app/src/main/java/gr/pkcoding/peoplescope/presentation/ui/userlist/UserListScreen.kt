@@ -9,6 +9,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -137,12 +138,13 @@ private fun UserListContent(
         }
     }
 
-    val onToggleBookmark: (User) -> Unit = remember(onIntent) {
-        { user -> onIntent(UserListIntent.ToggleBookmark(user)) }
+    // ✅ Memoized callbacks για better performance
+    val onToggleBookmark = remember(onIntent) {
+        { user: User -> onIntent(UserListIntent.ToggleBookmark(user)) }
     }
 
-    val onNavigateToDetail: (User) -> Unit = remember(onIntent) {
-        { user -> onIntent(UserListIntent.NavigateToDetail(user)) }
+    val onNavigateToDetail = remember(onIntent) {
+        { user: User -> onIntent(UserListIntent.NavigateToDetail(user)) }
     }
 
     val onScrollToTop: () -> Unit = remember(listState, coroutineScope) {
@@ -177,19 +179,25 @@ private fun UserListContent(
                 ) {
                     items(
                         count = lazyPagingItems.itemCount,
-                        key = lazyPagingItems.itemKey { user -> user.id },
+                        // ✅ Safe key generation για nullable IDs
+                        key = lazyPagingItems.itemKey { user ->
+                            user.id ?: "invalid_${user.hashCode()}"
+                        },
                         contentType = lazyPagingItems.itemContentType { "user" }
                     ) { index ->
                         val user = lazyPagingItems[index]
-                        user?.let {
+
+                        // ✅ Only render valid users
+                        user?.takeIf { it.isValid() }?.let { validUser ->
                             UserCard(
-                                user = it,
-                                onBookmarkClick = { onToggleBookmark(it) },
-                                onClick = { onNavigateToDetail(it) }
+                                user = validUser,
+                                onBookmarkClick = { onToggleBookmark(validUser) },
+                                onClick = { onNavigateToDetail(validUser) }
                             )
                         }
                     }
 
+                    // ✅ Inline append states handling
                     when (lazyPagingItems.loadState.append) {
                         is LoadState.Loading -> {
                             item {

@@ -152,7 +152,8 @@ class UserRepositoryImplTest {
         )
 
         coEvery { api.getUsers(1, 25) } returns testUserResponse
-        coEvery { bookmarkDao.getBookmarkedUserById("test-uuid") } returns bookmarkedEntity
+        // ✅ Fix: Mock the new method που χρησιμοποιούμε τώρα
+        coEvery { bookmarkDao.getBookmarkedUserIds() } returns listOf("test-uuid")
 
         // When
         val result = repository.getUsers(1, 25)
@@ -160,9 +161,91 @@ class UserRepositoryImplTest {
         // Then
         assertTrue(result is Result.Success)
         val users = result.getOrNull()
-        assertTrue(users?.first()?.isBookmarked ?: false)
+        assertNotNull(users)
+        assertTrue("User should be bookmarked", users!!.first().isBookmarked)
     }
 
+    @Test
+    fun `getUsers should return empty list when no bookmarked users`() = runTest {
+        // Given
+        coEvery { api.getUsers(1, 25) } returns testUserResponse
+        // ✅ Mock empty bookmark IDs
+        coEvery { bookmarkDao.getBookmarkedUserIds() } returns emptyList()
+
+        // When
+        val result = repository.getUsers(1, 25)
+
+        // Then
+        assertTrue(result is Result.Success)
+        val users = result.getOrNull()
+        assertNotNull(users)
+        assertFalse("User should not be bookmarked", users!!.first().isBookmarked)
+    }
+
+    @Test
+    fun `getUsers handles nullable fields correctly`() = runTest {
+        // Given - UserDto με null fields
+        val userDtoWithNulls = UserDto(
+            gender = null, // ✅ null gender
+            name = NameDto("Mr", "John", null), // ✅ null last name - should be filtered out
+            location = null, // ✅ null location
+            email = null,
+            login = LoginDto(uuid = "test-uuid", username = null, password = null, salt = null, md5 = null, sha1 = null, sha256 = null),
+            dob = null,
+            registered = null,
+            phone = null,
+            cell = null,
+            id = null,
+            picture = null,
+            nat = null
+        )
+
+        val responseWithNulls = UserResponse(
+            results = listOf(userDtoWithNulls),
+            info = InfoDto("test-seed", 1, 1, "1.4")
+        )
+
+        coEvery { api.getUsers(1, 25) } returns responseWithNulls
+        coEvery { bookmarkDao.getBookmarkedUserIds() } returns emptyList()
+
+        // When
+        val result = repository.getUsers(1, 25)
+
+        // Then
+        assertTrue(result is Result.Success)
+        val users = result.getOrNull()
+        assertNotNull(users)
+        // ✅ Με τη νέα validation, user με null last name θα φιλτραριστεί
+        assertTrue("Invalid users should be filtered out", users!!.isEmpty())
+    }
+    @Test
+    fun `toggleBookmark should handle null user ID gracefully`() = runTest {
+        // Given - User με null ID
+        val userWithNullId = testUser.copy(id = null)
+
+        // When
+        val result = repository.toggleBookmark(userWithNullId)
+
+        // Then
+        assertTrue(result is Result.Error)
+        val error = (result as Result.Error).error
+        assertTrue(error is DataError.Local)
+    }
+
+    @Test
+    fun `getUserById should return error for null userId`() = runTest {
+        val emptyUserId = ""
+
+        coEvery { bookmarkDao.getBookmarkedUserById(emptyUserId) } returns null
+
+        // When
+        val result = repository.getUserById(emptyUserId)
+
+        // Then
+        assertTrue(result is Result.Error)
+        val error = (result as Result.Error).error
+        assertTrue(error is UserError.UserNotFound)
+    }
     @Test
     fun `getUserById should return user if bookmarked`() = runTest {
         // Given

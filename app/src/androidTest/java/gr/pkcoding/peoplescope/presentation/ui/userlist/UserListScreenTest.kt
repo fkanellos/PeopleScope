@@ -5,6 +5,7 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
+import gr.pkcoding.peoplescope.data.local.dao.BookmarkDao
 import gr.pkcoding.peoplescope.domain.model.*
 import gr.pkcoding.peoplescope.domain.usecase.GetUsersPagedUseCase
 import gr.pkcoding.peoplescope.domain.usecase.ToggleBookmarkUseCase
@@ -24,6 +25,7 @@ class UserListScreenUITest {
     private lateinit var getUsersPagedUseCase: GetUsersPagedUseCase
     private lateinit var toggleBookmarkUseCase: ToggleBookmarkUseCase
     private lateinit var viewModel: UserListViewModel
+    private lateinit var bookmarkDao: BookmarkDao
 
     private val testUsers = listOf(
         User(
@@ -74,12 +76,14 @@ class UserListScreenUITest {
     fun setup() {
         getUsersPagedUseCase = mockk()
         toggleBookmarkUseCase = mockk()
+        bookmarkDao = mockk()
 
         every { getUsersPagedUseCase() } returns flowOf(PagingData.from(testUsers))
 
         viewModel = UserListViewModel(
             getUsersPagedUseCase = getUsersPagedUseCase,
-            toggleBookmarkUseCase = toggleBookmarkUseCase
+            toggleBookmarkUseCase = toggleBookmarkUseCase,
+            bookmarkDao = bookmarkDao
         )
     }
 

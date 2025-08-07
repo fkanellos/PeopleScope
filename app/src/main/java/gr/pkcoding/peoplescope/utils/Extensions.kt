@@ -7,7 +7,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.debounce
+import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -45,6 +48,18 @@ fun String.formatDate(): String {
 /**
  * Show toast message
  */
-fun Context.showToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
-    Toast.makeText(this, message, duration).show()
+fun Context.showToast(
+    message: String,
+    duration: Int = Toast.LENGTH_SHORT
+) {
+    try {
+        Toast.makeText(this, message, duration).show()
+    } catch (e: Exception) {
+        Timber.w(e, "Failed to show toast: $message")
+    }
+}
+
+@OptIn(FlowPreview::class)
+fun <T> Flow<T>.debounceSearch(timeoutMillis: Long = Constants.SEARCH_DEBOUNCE_MS): Flow<T> {
+    return this.debounce(timeoutMillis)
 }

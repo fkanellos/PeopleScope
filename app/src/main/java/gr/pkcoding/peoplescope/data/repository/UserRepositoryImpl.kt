@@ -12,11 +12,12 @@ import gr.pkcoding.peoplescope.domain.model.*
 import gr.pkcoding.peoplescope.domain.repository.UserRepository
 import gr.pkcoding.peoplescope.utils.Constants
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 
 class UserRepositoryImpl(
@@ -26,32 +27,67 @@ class UserRepositoryImpl(
 
     private val userCache = mutableMapOf<String, User>()
 
+    @Volatile
+    private var bookmarkIdsCache: Pair<Set<String>, Long>? = null
+    private val bookmarkCacheTtl = 30_000L // 30 seconds
+
+    private suspend fun getBookmarkedUserIds(): Set<String> {
+        val now = System.currentTimeMillis()
+        val cached = bookmarkIdsCache
+
+        // Return cached if still valid
+        if (cached != null && (now - cached.second) < bookmarkCacheTtl) {
+            return cached.first
+        }
+
+        // Fetch fresh data
+        return try {
+            val ids = bookmarkDao.getBookmarkedUserIds().toSet()
+            bookmarkIdsCache = ids to now
+            ids
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to get bookmarked user IDs")
+            cached?.first ?: emptySet()
+        }
+    }
+
     override suspend fun getUsers(page: Int, pageSize: Int): Result<List<User>, DataError> {
         return withContext(Dispatchers.IO) {
             try {
-                Timber.d("Making API call to getUsers(page=$page, pageSize=$pageSize)")
+                withTimeout(Constants.API_TIMEOUT) {
+                    Timber.d("🔄 API call: page=$page, size=$pageSize")
 
-                val response = api.getUsers(page = page, results = pageSize)
-                Timber.d("API response received: ${response.results.size} users")
+                    val response = api.getUsers(page = page, results = pageSize)
 
-                val users = response.results.toDomainModels()
-                Timber.d("Mapped to domain: ${users.size} users")
+                    // ✅ Efficient filtering και mapping
+                    val users = response.results
+                        .asSequence() // Lazy evaluation
+                        .mapNotNull { it.toDomainModel() }
+                        .filter { it.isValid() }
+                        .toList()
 
-                // Update bookmark status for each user
-                val usersWithBookmarkStatus = users.map { user ->
-                    val isBookmarked = try {
-                        bookmarkDao.getBookmarkedUserById(user.id) != null
-                    } catch (e: Exception) {
-                        Timber.w(e, "Error checking bookmark status for user ${user.id}")
-                        false
+                    if (users.isEmpty() && response.results.isNotEmpty()) {
+                        Timber.w("⚠️ All users filtered out - bad API data")
                     }
-                    user.copy(isBookmarked = isBookmarked)
-                }
 
-                Timber.d("Final result: ${usersWithBookmarkStatus.size} users with bookmark status")
-                Result.Success(usersWithBookmarkStatus)
+                    // ✅ Efficient bookmark status update
+                    val bookmarkedIds = getBookmarkedUserIds()
+                    val usersWithBookmarks = users.map { user ->
+                        val isBookmarked = user.id?.let { it in bookmarkedIds } ?: false
+                        user.copy(isBookmarked = isBookmarked).also { finalUser ->
+                            // Cache για navigation
+                            finalUser.id?.let { userCache[it] = finalUser }
+                        }
+                    }
+
+                    Timber.d("✅ Returned ${usersWithBookmarks.size} valid users")
+                    Result.Success(usersWithBookmarks)
+                }
+            } catch (e: TimeoutCancellationException) {
+                Timber.e("⏱️ API timeout for page $page")
+                Result.Error(DataError.Network(NetworkError.REQUEST_TIMEOUT))
             } catch (e: Exception) {
-                Timber.e(e, "Error fetching users from API")
+                Timber.e(e, "❌ API error for page $page")
                 Result.Error(DataError.Network(e.toNetworkError()))
             }
         }
@@ -62,42 +98,42 @@ class UserRepositoryImpl(
             try {
                 Timber.d("🔍 Getting user by ID: $userId")
 
-                // Check cache first, but ALWAYS get fresh bookmark status
+                // Check cache first με fresh bookmark status
                 userCache[userId]?.let { cachedUser ->
-                    Timber.d("✅ Found user in cache: ${cachedUser.name.getFullName()}")
-                    // ALWAYS get fresh bookmark status from database
-                    val isBookmarked = bookmarkDao.getBookmarkedUserById(userId) != null
-                    // Return user with FRESH bookmark status (ignore cached bookmark status)
+                    Timber.d("✅ Found user in cache: ${cachedUser.getDisplayName()}")
+                    val isBookmarked = try {
+                        bookmarkDao.getBookmarkedUserById(userId) != null
+                    } catch (e: Exception) {
+                        Timber.w(e, "Error checking bookmark status")
+                        false
+                    }
                     return@withContext Result.Success(
                         cachedUser.copy(isBookmarked = isBookmarked)
                     )
                 }
 
-                val bookmarkedUser = bookmarkDao.getBookmarkedUserById(userId)
+                // Check bookmarks database
+                val bookmarkedUser = try {
+                    bookmarkDao.getBookmarkedUserById(userId)
+                } catch (e: Exception) {
+                    Timber.w(e, "Error querying bookmarked user")
+                    null
+                }
+
                 if (bookmarkedUser != null) {
-                    Timber.d("✅ Found bookmarked user: ${bookmarkedUser.firstName} ${bookmarkedUser.lastName}")
-                    Result.Success(bookmarkedUser.toDomainModel())
+                    Timber.d("✅ Found bookmarked user: ${bookmarkedUser.firstName}")
+                    val user = bookmarkedUser.toDomainModel()
+                    userCache[userId] = user // Cache για future
+                    Result.Success(user)
                 } else {
-                    Timber.w("❌ User $userId not found in cache or bookmarks")
+                    Timber.w("❌ User $userId not found")
                     Result.Error(UserError.UserNotFound(userId))
                 }
             } catch (e: Exception) {
-                Timber.e(e, "❌ Error getting user by ID: $userId")
+                Timber.e(e, "❌ Error getting user by ID")
                 Result.Error(UserError.UserNotFound(userId))
             }
         }
-    }
-
-    override fun getBookmarkedUsers(): Flow<Result<List<User>, DataError.Local>> {
-        return bookmarkDao.getAllBookmarkedUsers()
-            .map { entities ->
-                Result.Success(entities.map { it.toDomainModel() }) as Result<List<User>, DataError.Local>
-            }
-            .catch { e ->
-                Timber.e(e, "Error getting bookmarked users")
-                emit(Result.Error(DataError.Local(e.toLocalError())))
-            }
-            .flowOn(Dispatchers.IO)
     }
 
     override fun isUserBookmarked(userId: String): Flow<Boolean> {
@@ -106,20 +142,29 @@ class UserRepositoryImpl(
     }
 
     override suspend fun toggleBookmark(user: User): Result<Unit, DataError.Local> {
+        if (!user.isValid() || user.id.isNullOrBlank()) {
+            return Result.Error(DataError.Local(LocalError.DATABASE_ERROR))
+        }
+
         return withContext(Dispatchers.IO) {
             try {
                 val isBookmarked = bookmarkDao.getBookmarkedUserById(user.id) != null
-                Timber.d("🔄 Toggle bookmark for ${user.name.getFullName()}: currently $isBookmarked")
+                Timber.d("🔄 Toggle bookmark for ${user.getDisplayName()}: $isBookmarked")
 
-                if (isBookmarked) {
-                    Timber.d("📤 Removing bookmark for ${user.id}")
+                val result = if (isBookmarked) {
                     removeBookmark(user.id)
                 } else {
-                    Timber.d("📥 Adding bookmark for ${user.id}")
                     bookmarkUser(user)
                 }
+
+                // Invalidate cache after change
+                if (result.isSuccess()) {
+                    bookmarkIdsCache = null
+                }
+
+                result
             } catch (e: Exception) {
-                Timber.e(e, "❌ Error toggling bookmark for ${user.id}")
+                Timber.e(e, "❌ Error toggling bookmark")
                 Result.Error(DataError.Local(e.toLocalError()))
             }
         }
@@ -128,12 +173,14 @@ class UserRepositoryImpl(
     override suspend fun bookmarkUser(user: User): Result<Unit, DataError.Local> {
         return withContext(Dispatchers.IO) {
             try {
-                Timber.d("💾 Inserting bookmark: ${user.name.getFullName()}")
-                bookmarkDao.insertBookmarkedUser(user.toBookmarkedEntity())
-                Timber.d("✅ Successfully bookmarked user: ${user.id}")
+                val entity = user.toBookmarkedEntity()
+                    ?: return@withContext Result.Error(DataError.Local(LocalError.DATABASE_ERROR))
+
+                bookmarkDao.insertBookmarkedUser(entity)
+                Timber.d("✅ Bookmarked user: ${user.getDisplayName()}")
                 Result.Success(Unit)
             } catch (e: Exception) {
-                Timber.e(e, "❌ Error bookmarking user: ${user.id}")
+                Timber.e(e, "❌ Error bookmarking user")
                 Result.Error(DataError.Local(e.toLocalError()))
             }
         }
@@ -142,12 +189,11 @@ class UserRepositoryImpl(
     override suspend fun removeBookmark(userId: String): Result<Unit, DataError.Local> {
         return withContext(Dispatchers.IO) {
             try {
-                Timber.d("🗑️ Removing bookmark: $userId")
                 bookmarkDao.deleteBookmarkedUserById(userId)
-                Timber.d("✅ Successfully removed bookmark: $userId")
+                Timber.d("✅ Removed bookmark: $userId")
                 Result.Success(Unit)
             } catch (e: Exception) {
-                Timber.e(e, "❌ Error removing bookmark: $userId")
+                Timber.e(e, "❌ Error removing bookmark")
                 Result.Error(DataError.Local(e.toLocalError()))
             }
         }
@@ -161,22 +207,23 @@ class UserRepositoryImpl(
                 pageSize = Constants.PAGE_SIZE,
                 enablePlaceholders = false,
                 initialLoadSize = Constants.PAGE_SIZE,
-                prefetchDistance = 1,
-                maxSize = Constants.PAGE_SIZE * 10
+                prefetchDistance = 3,
+                maxSize = Constants.PAGE_SIZE * 20,
+                jumpThreshold = Int.MIN_VALUE
             ),
             pagingSourceFactory = {
-                Timber.d("🔥 Creating new UserPagingSource")
-                UserPagingSource(api = api, bookmarkDao = bookmarkDao)
+                UserPagingSource(api, bookmarkDao)
             }
         ).flow
             .map { pagingData ->
                 pagingData.map { user ->
-                    // Cache user for detail navigation
-                    userCache[user.id] = user
+                    // Cache για navigation
+                    if (user.isValid() && !user.id.isNullOrBlank()) {
+                        userCache[user.id] = user
+                    }
                     user
                 }
             }
             .flowOn(Dispatchers.IO)
     }
-
 }

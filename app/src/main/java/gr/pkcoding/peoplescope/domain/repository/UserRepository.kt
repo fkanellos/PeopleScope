@@ -18,10 +18,7 @@ interface UserRepository {
      */
     suspend fun getUserById(userId: String): Result<User, UserError>
 
-    /**
-     * Get all bookmarked users
-     */
-    fun getBookmarkedUsers(): Flow<Result<List<User>, DataError.Local>>
+
 
     /**
      * Check if user is bookmarked

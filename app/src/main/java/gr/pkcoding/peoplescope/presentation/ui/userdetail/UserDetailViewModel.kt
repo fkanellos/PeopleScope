@@ -62,7 +62,7 @@ class UserDetailViewModel(
         val currentUser = state.value.user ?: return
 
         viewModelScope.launch {
-            Timber.d("⭐ Detail screen: Toggling bookmark for ${currentUser.name.getFullName()}")
+            Timber.d("⭐ Detail screen: Toggling bookmark for ${currentUser.name?.getFullName()}")
 
             toggleBookmarkUseCase(currentUser).fold(
                 onSuccess = {
