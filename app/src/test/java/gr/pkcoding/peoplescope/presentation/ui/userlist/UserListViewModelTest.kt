@@ -1,6 +1,7 @@
 package gr.pkcoding.peoplescope.presentation.ui.userlist
 
 import androidx.paging.PagingData
+import app.cash.turbine.test
 import gr.pkcoding.peoplescope.data.local.dao.BookmarkDao
 import gr.pkcoding.peoplescope.domain.model.*
 import gr.pkcoding.peoplescope.domain.usecase.GetUsersPagedUseCase
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.*
 import org.junit.After
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -131,11 +133,16 @@ class UserListViewModelTest {
 
     @Test
     fun `navigateToDetail should emit navigation effect`() = testScope.runTest {
-        viewModel.processIntent(UserListIntent.NavigateToDetail(testUser))
-        advanceUntilIdle()
+        // Given
+        viewModel.effect.test { // ← Turbine's test function
+            // When
+            viewModel.processIntent(UserListIntent.NavigateToDetail(testUser))
 
-        // In a real test, you'd verify the effect was emitted using Turbine
-        // This requires collecting the effect flow in a separate coroutine
+            // Then
+            val effect = awaitItem()
+            assertTrue(effect is UserListEffect.NavigateToUserDetail)
+            assertEquals(testUser, (effect as UserListEffect.NavigateToUserDetail).user)
+        }
     }
 
     @Test

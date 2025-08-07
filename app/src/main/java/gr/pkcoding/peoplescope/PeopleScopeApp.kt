@@ -9,6 +9,7 @@ import gr.pkcoding.peoplescope.di.appModule
 import gr.pkcoding.peoplescope.di.dataModule
 import gr.pkcoding.peoplescope.di.domainModule
 import gr.pkcoding.peoplescope.di.presentationModule
+import gr.pkcoding.peoplescope.utils.Constants
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -36,21 +37,22 @@ class PeopleScopeApp : Application() {
                 presentationModule
             )
         }
-        // Configure Coil for better performance
+
         val imageLoader = ImageLoader.Builder(this)
             .memoryCache {
                 MemoryCache.Builder(this)
-                    .maxSizePercent(0.25) // Use 25% of app memory for images
+                    .maxSizePercent(Constants.MEMORY_CACHE_PERCENT)
+                    .strongReferencesEnabled(false)
                     .build()
             }
             .diskCache {
                 DiskCache.Builder()
                     .directory(this.cacheDir.resolve("image_cache"))
-                    .maxSizeBytes(50 * 1024 * 1024) // 50MB disk cache
+                    .maxSizeBytes(Constants.DISK_CACHE_SIZE)
                     .build()
             }
-            .crossfade(false) // Disable crossfade for smoother scrolling
-            .respectCacheHeaders(false) // Don't check cache headers for faster loading
+            .crossfade(150) //false
+            .respectCacheHeaders(false)
             .build()
         Coil.setImageLoader(imageLoader)
     }

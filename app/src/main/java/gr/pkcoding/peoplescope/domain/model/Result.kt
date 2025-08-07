@@ -24,37 +24,10 @@ sealed class Result<out D, out E : Error> {
     fun isSuccess(): Boolean = this is Success
 
     /**
-     * Returns true if this is an Error
-     */
-    fun isError(): Boolean = this is Error
-
-    /**
      * Get data or null
      */
     fun getOrNull(): D? = when (this) {
         is Success -> data
         is Error -> null
-    }
-
-    /**
-     * Map success value
-     */
-    inline fun <R> map(transform: (D) -> R): Result<R, E> {
-        return when (this) {
-            is Success -> Success(transform(data))
-            is Error -> Error(error)
-        }
-    }
-
-    /**
-     * Map error value
-     */
-    inline fun <F : gr.pkcoding.peoplescope.domain.model.Error> mapError(
-        transform: (E) -> F
-    ): Result<D, F> {
-        return when (this) {
-            is Success -> Success(data)
-            is Error -> Error(transform(error))
-        }
     }
 }

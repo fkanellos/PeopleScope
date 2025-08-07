@@ -15,4 +15,12 @@ object Constants {
 
     // Network
     const val NETWORK_TIMEOUT = 30L
+    const val API_TIMEOUT = 15_000L
+
+    // Search
+    const val SEARCH_DEBOUNCE_MS = 300L
+
+    // Performance
+    const val MEMORY_CACHE_PERCENT = 0.20
+    const val DISK_CACHE_SIZE = 30L * 1024 * 1024
 }

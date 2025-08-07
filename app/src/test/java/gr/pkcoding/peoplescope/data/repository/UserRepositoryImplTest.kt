@@ -275,25 +275,49 @@ class UserRepositoryImplTest {
         verify { bookmarkDao.isUserBookmarked("test-uuid") }
     }
 
-//    @Test
-//    fun `getUserById should return cached user when available`() = runTest {
-//        // Given - First populate the cache by calling getUsers (which populates userCache)
-//        coEvery { api.getUsers(1, 25) } returns testUserResponse
-//        coEvery { bookmarkDao.getBookmarkedUserById("test-uuid") } returns null
-//
-//        // Populate cache by calling getUsers first
-//        repository.getUsers(1, 25)
-//
-//        // When - Now getUserById should find the user in cache
-//        val result = repository.getUserById("test-uuid")
-//
-//        // Then
-//        assertTrue(result is Result.Success)
-//        val user = result.getOrNull()
-//        assertEquals("test-uuid", user?.id)
-//        assertEquals("John", user?.name?.first)
-//        assertEquals(false, user?.isBookmarked) // Not bookmarked since DAO returns null
-//    }
+    @Test
+    fun `getUserById should return bookmarked user when available`() = runTest {
+        // Given - User exists in bookmarks
+        val bookmarkedEntity = BookmarkedUserEntity(
+            id = "test-uuid",
+            gender = "male",
+            title = "Mr",
+            firstName = "John",
+            lastName = "Doe",
+            email = "john.doe@example.com",
+            phone = "+1234567890",
+            cell = "+0987654321",
+            pictureLarge = "large.jpg",
+            pictureMedium = "medium.jpg",
+            pictureThumbnail = "thumbnail.jpg",
+            streetNumber = 123,
+            streetName = "Main St",
+            city = "New York",
+            state = "NY",
+            country = "USA",
+            postcode = "10001",
+            latitude = "40.7128",
+            longitude = "-74.0060",
+            timezoneOffset = "-5:00",
+            timezoneDescription = "Eastern Time",
+            dobDate = "1990-01-01T00:00:00.000Z",
+            dobAge = 33,
+            nationality = "US",
+            bookmarkedAt = System.currentTimeMillis()
+        )
+
+        coEvery { bookmarkDao.getBookmarkedUserById("test-uuid") } returns bookmarkedEntity
+
+        // When
+        val result = repository.getUserById("test-uuid")
+
+        // Then
+        assertTrue(result is Result.Success)
+        val user = result.getOrNull()
+        assertEquals("test-uuid", user?.id)
+        assertEquals("John", user?.name?.first)
+        assertEquals(true, user?.isBookmarked)
+    }
 
     @Test
     fun `getUserById should return cached user with bookmark status when available`() = runTest {

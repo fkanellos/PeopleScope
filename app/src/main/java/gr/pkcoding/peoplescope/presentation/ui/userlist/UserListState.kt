@@ -1,5 +1,7 @@
 package gr.pkcoding.peoplescope.presentation.ui.userlist
 
+import gr.pkcoding.peoplescope.domain.model.Error
+import gr.pkcoding.peoplescope.domain.model.Result
 import gr.pkcoding.peoplescope.domain.model.User
 import gr.pkcoding.peoplescope.presentation.UiText
 import gr.pkcoding.peoplescope.presentation.base.ViewIntent
@@ -12,12 +14,12 @@ data class UserListState(
 ) : ViewState
 
 // Extension function for Result
-inline fun <T, E : gr.pkcoding.peoplescope.domain.model.Error> gr.pkcoding.peoplescope.domain.model.Result<T, E>.fold(
+inline fun <T, E : Error> Result<T, E>.fold(
     onSuccess: (T) -> Unit,
     onError: (E) -> Unit
 ) {
     when (this) {
-        is gr.pkcoding.peoplescope.domain.model.Result.Success -> onSuccess(data)
-        is gr.pkcoding.peoplescope.domain.model.Result.Error -> onError(error)
+        is Result.Success -> onSuccess(data)
+        is Result.Error -> onError(error)
     }
 }
