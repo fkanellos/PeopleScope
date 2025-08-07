@@ -12,6 +12,7 @@
 
     <!-- User list screen -->
     <string name="users_title">People</string>
+    <string name="searching_users_title">Searched People</string>
     <string name="retry">Retry</string>
     <string name="loading">Loading…</string>
 

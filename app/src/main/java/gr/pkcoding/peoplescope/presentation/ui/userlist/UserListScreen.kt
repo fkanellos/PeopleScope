@@ -1,14 +1,15 @@
 package gr.pkcoding.peoplescope.presentation.ui.userlist
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -21,12 +22,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -40,7 +38,6 @@ import gr.pkcoding.peoplescope.presentation.ui.components.LoadingView
 import gr.pkcoding.peoplescope.presentation.ui.components.SearchBar
 import gr.pkcoding.peoplescope.presentation.ui.components.UserCard
 import kotlinx.coroutines.launch
-import timber.log.Timber
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,15 +46,14 @@ fun UserListScreen(
     onIntent: (UserListIntent) -> Unit,
     viewModel: UserListViewModel
 ) {
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val listState = rememberLazyListState()
 
-    val lazyPagingItems = remember(viewModel) {
-        viewModel.pagedUsersWithUpdates
-    }.collectAsLazyPagingItems()
-
-    LaunchedEffect(lifecycle) {
-        Timber.d("🔄 UserListScreen lifecycle changed")
+    val showFullTopAppBar by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset < 20
+        }
     }
+
     val onSearchQueryChanged: (String) -> Unit = remember(onIntent) {
         { query -> onIntent(UserListIntent.UpdateSearchQuery(query)) }
     }
@@ -66,30 +62,32 @@ fun UserListScreen(
         { onIntent(UserListIntent.ClearSearch) }
     }
 
-    val onRefresh: () -> Unit = remember(lazyPagingItems) {
-        {
-            Timber.d("🔄 Pull to refresh triggered")
-            lazyPagingItems.refresh()
-        }
-    }
-
-    val isRefreshing = lazyPagingItems.loadState.refresh is LoadState.Loading
+    val lazyPagingItems = remember(viewModel) {
+        viewModel.pagedUsersWithUpdates
+    }.collectAsLazyPagingItems()
 
     Scaffold(
         topBar = {
             Column(
                 Modifier
                     .wrapContentSize()
-                    .background(Color.Transparent)
+                    .background(MaterialTheme.colorScheme.primary)
                     .zIndex(1f)
             ) {
-                TopAppBar(
-                    title = { Text(stringResource(R.string.users_title)) },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                )
+                Crossfade(targetState = showFullTopAppBar) { visible ->
+                    if (visible) {
+                        TopAppBar(
+                            title = { Text(stringResource(R.string.users_title)) },
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        )
+                    } else {
+                        Spacer(Modifier.height(0.dp))
+                    }
+                }
+
                 SearchBar(
                     query = state.searchQuery,
                     onQueryChange = onSearchQueryChanged,
@@ -112,16 +110,15 @@ fun UserListScreen(
             modifier = Modifier.padding(paddingValues)
         ) {
             PullToRefreshBox(
-                isRefreshing = isRefreshing,
-                onRefresh = onRefresh,
+                isRefreshing = lazyPagingItems.loadState.refresh is LoadState.Loading,
+                onRefresh = { lazyPagingItems.refresh() },
                 modifier = Modifier.fillMaxSize()
             ) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    UserListContent(
-                        lazyPagingItems = lazyPagingItems,
-                        onIntent = onIntent
-                    )
-                }
+                UserListContent(
+                    lazyPagingItems = lazyPagingItems,
+                    onIntent = onIntent,
+                    listState = listState
+                )
             }
         }
     }
@@ -130,12 +127,11 @@ fun UserListScreen(
 @Composable
 private fun UserListContent(
     lazyPagingItems: LazyPagingItems<User>,
-    onIntent: (UserListIntent) -> Unit
+    onIntent: (UserListIntent) -> Unit,
+    listState: LazyListState
 ) {
-    val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
 
-    // Show scroll-to-top button when: itemCount > 10 AND scrolled past item 3
     val showScrollToTop by remember {
         derivedStateOf {
             lazyPagingItems.itemCount > 10 && listState.firstVisibleItemIndex > 3
@@ -161,13 +157,11 @@ private fun UserListContent(
     Box(modifier = Modifier.fillMaxSize()) {
         when {
             lazyPagingItems.loadState.refresh is LoadState.Loading && lazyPagingItems.itemCount == 0 -> {
-                Timber.d("📱 Showing loading state")
                 LoadingView(useShimmer = true)
             }
 
             lazyPagingItems.loadState.refresh is LoadState.Error && lazyPagingItems.itemCount == 0 -> {
                 val error = (lazyPagingItems.loadState.refresh as LoadState.Error).error
-                Timber.e("❌ Showing error state: ${error.message}")
                 ErrorView(
                     message = error.localizedMessage ?: "An error occurred",
                     onRetry = { lazyPagingItems.retry() }
@@ -175,7 +169,6 @@ private fun UserListContent(
             }
 
             else -> {
-                Timber.d("📋 Showing user list: ${lazyPagingItems.itemCount} items")
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
@@ -198,7 +191,6 @@ private fun UserListContent(
                         }
                     }
 
-                    // Loading more indicator
                     when (lazyPagingItems.loadState.append) {
                         is LoadState.Loading -> {
                             item {
@@ -242,6 +234,7 @@ private fun UserListContent(
                 }
             }
         }
+
         AnimatedVisibility(
             visible = showScrollToTop,
             enter = slideInVertically { it } + fadeIn(),

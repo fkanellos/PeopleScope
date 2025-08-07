@@ -115,6 +115,13 @@ class UserListViewModel(
                 onSuccess = {
                     val newBookmarkState = !user.isBookmarked
                     Timber.d("✅ Successfully toggled bookmark for user: ${user.id}, new state: $newBookmarkState")
+                    _bookmarkedUserIds.update { ids ->
+                        if (user.isBookmarked) {
+                            ids - user.id
+                        } else {
+                            ids + user.id
+                        }
+                    }
 
                     // Remove manual state update - database observer will handle this
                     sendEffect(UserListEffect.ShowBookmarkToggled(newBookmarkState))

@@ -62,13 +62,13 @@ class UserRepositoryImpl(
             try {
                 Timber.d("🔍 Getting user by ID: $userId")
 
-                // First check cache (from paging data)
-                userCache[userId]?.let { cachedUser ->
-                    Timber.d("✅ Found user in cache: ${cachedUser.name.getFullName()}")
-                    // Update bookmark status from database
-                    val isBookmarked = bookmarkDao.getBookmarkedUserById(userId) != null
-                    return@withContext Result.Success(cachedUser.copy(isBookmarked = isBookmarked))
-                }
+//                // First check cache (from paging data)
+//                userCache[userId]?.let { cachedUser ->
+//                    Timber.d("✅ Found user in cache: ${cachedUser.name.getFullName()}")
+//                    // Update bookmark status from database
+//                    val isBookmarked = bookmarkDao.getBookmarkedUserById(userId) != null
+//                    return@withContext Result.Success(cachedUser.copy(isBookmarked = isBookmarked))
+//                }
 
                 // Then check if user is bookmarked
                 val bookmarkedUser = bookmarkDao.getBookmarkedUserById(userId)
