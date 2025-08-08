@@ -1,7 +1,10 @@
 package gr.pkcoding.peoplescope.presentation.ui.userlist
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -9,7 +12,6 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -20,6 +22,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
@@ -66,6 +69,24 @@ fun UserListScreen(
         viewModel.pagedUsersWithUpdates
     }.collectAsLazyPagingItems()
 
+    val appBarHeight by animateDpAsState(
+        targetValue = if (showFullTopAppBar) 80.dp else 0.dp,
+        animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing),
+        label = "appBarHeight"
+    )
+
+    val appBarAlpha by animateFloatAsState(
+        targetValue = if (showFullTopAppBar) 1f else 0f,
+        animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing),
+        label = "appBarAlpha"
+    )
+
+    val searchBarOffset by animateDpAsState(
+        targetValue = 0.dp,
+        animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing),
+        label = "searchBarOffset"
+    )
+
     Scaffold(
         topBar = {
             Column(
@@ -74,17 +95,21 @@ fun UserListScreen(
                     .background(MaterialTheme.colorScheme.primary)
                     .zIndex(1f)
             ) {
-                Crossfade(targetState = showFullTopAppBar) { visible ->
-                    if (visible) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(appBarHeight)
+                        .alpha(appBarAlpha)
+                ) {
+                    if (appBarHeight > 0.dp) {
                         TopAppBar(
                             title = { Text(stringResource(R.string.users_title)) },
                             colors = TopAppBarDefaults.topAppBarColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
                                 titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
+                            ),
+                            modifier = Modifier.fillMaxSize()
                         )
-                    } else {
-                        Spacer(Modifier.height(0.dp))
                     }
                 }
 
@@ -93,6 +118,7 @@ fun UserListScreen(
                     onQueryChange = onSearchQueryChanged,
                     onClearClick = onClearSearch,
                     modifier = Modifier
+                        .offset(y = searchBarOffset)
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(
