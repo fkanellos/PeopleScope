@@ -69,6 +69,17 @@ fun UserListScreen(
         viewModel.pagedUsersWithUpdates
     }.collectAsLazyPagingItems()
 
+    val topAppBarTitleResId by remember(state.searchQuery) {
+        derivedStateOf {
+            if (state.searchQuery.isBlank()) {
+                R.string.users_title
+            } else {
+                R.string.searching_users_title
+            }
+        }
+    }
+
+
     val appBarHeight by animateDpAsState(
         targetValue = if (showFullTopAppBar) 80.dp else 0.dp,
         animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing),
@@ -103,7 +114,7 @@ fun UserListScreen(
                 ) {
                     if (appBarHeight > 0.dp) {
                         TopAppBar(
-                            title = { Text(stringResource(R.string.users_title)) },
+                            title = { Text(stringResource(topAppBarTitleResId)) },
                             colors = TopAppBarDefaults.topAppBarColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
                                 titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer

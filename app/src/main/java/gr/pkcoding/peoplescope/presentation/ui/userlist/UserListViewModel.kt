@@ -112,7 +112,7 @@ class UserListViewModel(
 
     private fun clearSearch() {
         Timber.d("🧹 Clearing search query")
-        _searchQuery.value = ""
+        updateState { copy(searchQuery = "") }
     }
 
     private fun toggleBookmark(user: User) {
