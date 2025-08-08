@@ -96,7 +96,6 @@ androidx-paging-testing = { module = "androidx.paging:paging-testing", version.r
 
 # Image Loading
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
-coil-gif = { module = "io.coil-kt:coil-gif", version.ref = "coil" }
 
 # Logging
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }

@@ -4,8 +4,8 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.paging.PagingData
-import androidx.paging.compose.collectAsLazyPagingItems
 import gr.pkcoding.peoplescope.data.local.dao.BookmarkDao
+import gr.pkcoding.peoplescope.data.local.entity.BookmarkedUserEntity
 import gr.pkcoding.peoplescope.domain.model.*
 import gr.pkcoding.peoplescope.domain.usecase.GetUsersPagedUseCase
 import gr.pkcoding.peoplescope.domain.usecase.ToggleBookmarkUseCase
@@ -74,12 +74,16 @@ class UserListScreenUITest {
 
     @Before
     fun setup() {
+        // Create mocks
         getUsersPagedUseCase = mockk()
         toggleBookmarkUseCase = mockk()
         bookmarkDao = mockk()
 
+        // CRITICAL: Mock the Flow methods that ViewModel observes
+        every { bookmarkDao.getAllBookmarkedUsers() } returns flowOf(emptyList<BookmarkedUserEntity>())
         every { getUsersPagedUseCase() } returns flowOf(PagingData.from(testUsers))
 
+        // Create ViewModel AFTER mocks are set up
         viewModel = UserListViewModel(
             getUsersPagedUseCase = getUsersPagedUseCase,
             toggleBookmarkUseCase = toggleBookmarkUseCase,
@@ -98,6 +102,9 @@ class UserListScreenUITest {
                 )
             }
         }
+
+        // Wait for content to load
+        composeTestRule.waitForIdle()
 
         // Check if the screen title is displayed
         composeTestRule
@@ -135,6 +142,9 @@ class UserListScreenUITest {
             }
         }
 
+        // Wait for content to load
+        composeTestRule.waitForIdle()
+
         // Check if search bar is displayed
         composeTestRule
             .onNodeWithText("Search users...")
@@ -162,13 +172,18 @@ class UserListScreenUITest {
             }
         }
 
+        // Wait for content to load
+        composeTestRule.waitForIdle()
+
         // Type in search bar
         composeTestRule
             .onNodeWithText("Search users...")
             .performTextInput("John")
 
-        // Verify search query is updated
-        // In a real test, you'd mock the filtering behavior
+        // Verify search query is updated in the state
+        // Note: This is a simplified test - in reality you'd want to verify
+        // that the filtering actually works in the UI
+        composeTestRule.waitForIdle()
     }
 
     @Test
@@ -182,6 +197,9 @@ class UserListScreenUITest {
                 )
             }
         }
+
+        // Wait for content to load
+        composeTestRule.waitForIdle()
 
         // Find and click bookmark button (this would be identified by content description)
         composeTestRule
@@ -202,6 +220,9 @@ class UserListScreenUITest {
                 )
             }
         }
+
+        // Wait for content to load
+        composeTestRule.waitForIdle()
 
         // Find and verify user cards are clickable
         composeTestRule
@@ -224,6 +245,9 @@ class UserListScreenUITest {
                 )
             }
         }
+
+        // Wait for content to load
+        composeTestRule.waitForIdle()
 
         // Check if clear button is displayed when search is not empty
         composeTestRule

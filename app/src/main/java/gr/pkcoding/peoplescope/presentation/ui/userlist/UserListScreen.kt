@@ -138,7 +138,6 @@ private fun UserListContent(
         }
     }
 
-    // ✅ Memoized callbacks για better performance
     val onToggleBookmark = remember(onIntent) {
         { user: User -> onIntent(UserListIntent.ToggleBookmark(user)) }
     }
@@ -179,7 +178,6 @@ private fun UserListContent(
                 ) {
                     items(
                         count = lazyPagingItems.itemCount,
-                        // ✅ Safe key generation για nullable IDs
                         key = lazyPagingItems.itemKey { user ->
                             user.id ?: "invalid_${user.hashCode()}"
                         },
@@ -187,7 +185,6 @@ private fun UserListContent(
                     ) { index ->
                         val user = lazyPagingItems[index]
 
-                        // ✅ Only render valid users
                         user?.takeIf { it.isValid() }?.let { validUser ->
                             UserCard(
                                 user = validUser,
@@ -197,7 +194,6 @@ private fun UserListContent(
                         }
                     }
 
-                    // ✅ Inline append states handling
                     when (lazyPagingItems.loadState.append) {
                         is LoadState.Loading -> {
                             item {
