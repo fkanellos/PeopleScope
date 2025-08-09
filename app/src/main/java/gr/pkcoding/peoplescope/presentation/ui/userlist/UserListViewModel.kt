@@ -6,6 +6,7 @@ import androidx.paging.cachedIn
 import androidx.paging.filter
 import androidx.paging.map
 import gr.pkcoding.peoplescope.data.local.dao.BookmarkDao
+import gr.pkcoding.peoplescope.data.network.NetworkConnectivityProvider
 import gr.pkcoding.peoplescope.domain.model.User
 import gr.pkcoding.peoplescope.domain.usecase.GetUsersPagedUseCase
 import gr.pkcoding.peoplescope.domain.usecase.ToggleBookmarkUseCase
@@ -21,7 +22,8 @@ import timber.log.Timber
 class UserListViewModel(
     private val getUsersPagedUseCase: GetUsersPagedUseCase,
     private val toggleBookmarkUseCase: ToggleBookmarkUseCase,
-    private val bookmarkDao: BookmarkDao
+    private val bookmarkDao: BookmarkDao,
+    private val networkProvider: NetworkConnectivityProvider
 ) : BaseViewModel<UserListState, UserListIntent, UserListEffect>(
     UserListState()
 ) {
@@ -29,10 +31,12 @@ class UserListViewModel(
     private val _searchQuery = MutableStateFlow("")
     private val _bookmarkedUserIds = MutableStateFlow<Set<String>>(emptySet())
 
+    // ✅ ENHANCED - Smart offline mode detection στο UserListViewModel
+
     init {
         Timber.d("🚀 UserListViewModel initialized")
 
-        // Observe database changes
+        // Observe database changes (existing)
         viewModelScope.launch {
             bookmarkDao.getAllBookmarkedUsers().collect { bookmarkedUsers ->
                 val bookmarkedIds = bookmarkedUsers.map { it.id }.toSet()
@@ -41,7 +45,35 @@ class UserListViewModel(
             }
         }
 
-        // ✅ Debounced search query updates
+        // ✅ ENHANCED Network state observing με smart offline detection
+        viewModelScope.launch {
+            networkProvider.networkConnectivityFlow().collect { isOnline ->
+                Timber.d("🌐 Network state changed: $isOnline")
+
+                val currentState = state.value
+                val hasBookmarkedUsers = _bookmarkedUserIds.value.isNotEmpty()
+
+                updateState {
+                    copy(
+                        isOnline = isOnline,
+                        // ✅ SMART LOGIC: Show offline mode μόνο αν:
+                        // 1. Δεν έχουμε internet ΚΑΙ
+                        // 2. Έχουμε bookmarked users να δείξουμε
+                        isOfflineMode = !isOnline && hasBookmarkedUsers,
+                        showNetworkError = !isOnline && !hasBookmarkedUsers
+                    )
+                }
+
+                // Auto-retry when connection restored
+                if (isOnline && currentState.showNetworkError) {
+                    Timber.d("🔄 Connection restored - clearing network error")
+                    updateState { copy(showNetworkError = false) }
+                    // Could trigger refresh here if needed
+                }
+            }
+        }
+
+        // Search query handling (existing)
         viewModelScope.launch {
             _searchQuery
                 .debounceSearch(Constants.SEARCH_DEBOUNCE_MS)
@@ -53,7 +85,6 @@ class UserListViewModel(
         }
     }
 
-    // Base paging data flow
     private val pagedUsers: Flow<PagingData<User>> = getUsersPagedUseCase()
         .cachedIn(viewModelScope)
 
@@ -72,7 +103,7 @@ class UserListViewModel(
                 user.copy(isBookmarked = isBookmarked)
             }
             .filter { user ->
-                // ✅ Only show valid users
+                // Only show valid users
                 if (!user.isValid()) {
                     Timber.w("Filtering out invalid user: ${user.getDisplayName()}")
                     return@filter false
@@ -104,7 +135,6 @@ class UserListViewModel(
         }
     }
 
-    // ✅ Immediate UI update + debounced processing
     private fun updateSearchQuery(query: String) {
         Timber.d("🔍 Updating search query to: '$query'")
         updateState { copy(searchQuery = query) }
@@ -149,7 +179,6 @@ class UserListViewModel(
     }
 
     private fun navigateToDetail(user: User) {
-        // ✅ Double-check validation πριν το navigation
         if (!user.isValid() || user.id.isNullOrBlank()) {
             Timber.w("Cannot navigate to detail for invalid user: ${user.getDisplayName()}")
             sendEffect(UserListEffect.ShowError(UiText.DynamicString("Cannot view details for this user")))

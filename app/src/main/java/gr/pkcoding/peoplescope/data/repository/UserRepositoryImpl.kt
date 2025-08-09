@@ -6,6 +6,7 @@ import androidx.paging.PagingData
 import androidx.paging.map
 import gr.pkcoding.peoplescope.data.local.dao.BookmarkDao
 import gr.pkcoding.peoplescope.data.mapper.*
+import gr.pkcoding.peoplescope.data.network.NetworkConnectivityProvider
 import gr.pkcoding.peoplescope.data.paging.UserPagingSource
 import gr.pkcoding.peoplescope.data.remote.api.RandomUserApi
 import gr.pkcoding.peoplescope.domain.model.*
@@ -14,6 +15,7 @@ import gr.pkcoding.peoplescope.utils.Constants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -22,15 +24,34 @@ import timber.log.Timber
 
 class UserRepositoryImpl(
     private val api: RandomUserApi,
-    private val bookmarkDao: BookmarkDao
+    private val bookmarkDao: BookmarkDao,
+    private val networkProvider: NetworkConnectivityProvider
 ) : UserRepository {
 
     private val userCache = mutableMapOf<String, User>()
 
     @Volatile
     private var bookmarkIdsCache: Pair<Set<String>, Long>? = null
-    private val bookmarkCacheTtl = 30_000L // 30 seconds
+    private val bookmarkCacheTtl = 30_000L
 
+    private suspend fun getOfflineBookmarkedUsers(): Result<List<User>, DataError> {
+        return withContext(Dispatchers.IO) {
+            try {
+                Timber.d("📱 Loading offline bookmarked users")
+
+                val bookmarkedUsers = bookmarkDao.getAllBookmarkedUsers()
+                    .first()
+                    .map { it.toDomainModel() }
+                    .filter { it.isValid() }
+
+                Timber.d("✅ Loaded ${bookmarkedUsers.size} offline bookmarked users")
+                Result.Success(bookmarkedUsers)
+            } catch (e: Exception) {
+                Timber.e(e, "❌ Error loading offline bookmarked users")
+                Result.Error(DataError.Local(e.toLocalError()))
+            }
+        }
+    }
     private suspend fun getBookmarkedUserIds(): Set<String> {
         val now = System.currentTimeMillis()
         val cached = bookmarkIdsCache
@@ -53,15 +74,25 @@ class UserRepositoryImpl(
 
     override suspend fun getUsers(page: Int, pageSize: Int): Result<List<User>, DataError> {
         return withContext(Dispatchers.IO) {
+
+            // Check network connectivity first
+            if (!networkProvider.isNetworkAvailable()) {
+                Timber.w("📵 No network connection - returning offline bookmarked users")
+                return@withContext if (page == 1) {
+                    getOfflineBookmarkedUsers()
+                } else {
+                    Result.Success(emptyList())
+                }
+            }
+
             try {
                 withTimeout(Constants.API_TIMEOUT) {
                     Timber.d("🔄 API call: page=$page, size=$pageSize")
 
                     val response = api.getUsers(page = page, results = pageSize)
 
-                    // ✅ Efficient filtering και mapping
                     val users = response.results
-                        .asSequence() // Lazy evaluation
+                        .asSequence()
                         .mapNotNull { it.toDomainModel() }
                         .filter { it.isValid() }
                         .toList()
@@ -70,12 +101,10 @@ class UserRepositoryImpl(
                         Timber.w("⚠️ All users filtered out - bad API data")
                     }
 
-                    // ✅ Efficient bookmark status update
                     val bookmarkedIds = getBookmarkedUserIds()
                     val usersWithBookmarks = users.map { user ->
                         val isBookmarked = user.id?.let { it in bookmarkedIds } ?: false
                         user.copy(isBookmarked = isBookmarked).also { finalUser ->
-                            // Cache για navigation
                             finalUser.id?.let { userCache[it] = finalUser }
                         }
                     }
@@ -85,20 +114,41 @@ class UserRepositoryImpl(
                 }
             } catch (e: TimeoutCancellationException) {
                 Timber.e("⏱️ API timeout for page $page")
-                Result.Error(DataError.Network(NetworkError.REQUEST_TIMEOUT))
+                handleNetworkErrorWithFallback(e, page)
+
             } catch (e: Exception) {
-                Timber.e(e, "❌ API error for page $page")
-                Result.Error(DataError.Network(e.toNetworkError()))
+                Timber.e(e, "❌ API error for page $page: ${e.message}")
+                handleNetworkErrorWithFallback(e, page)
             }
         }
     }
 
+    // ✅ NEW - Helper function για consistent error handling
+    private suspend fun handleNetworkErrorWithFallback(
+        networkError: Exception,
+        page: Int
+    ): Result<List<User>, DataError> {
+        // Fallback to offline data μόνο για first page
+        return if (page == 1) {
+            try {
+                Timber.d("🔄 Falling back to offline bookmarked users due to: ${networkError.message}")
+                getOfflineBookmarkedUsers()
+            } catch (offlineError: Exception) {
+                Timber.e(offlineError, "Offline fallback also failed")
+                // ✅ FIXED - Χρησιμοποιούμε το original network error με proper mapping
+                Result.Error(DataError.Network(networkError.toNetworkError()))
+            }
+        } else {
+            // Για subsequent pages, επιστρέφουμε το network error απευθείας
+            Result.Error(DataError.Network(networkError.toNetworkError()))
+        }
+    }
     override suspend fun getUserById(userId: String): Result<User, UserError> {
         return withContext(Dispatchers.IO) {
             try {
                 Timber.d("🔍 Getting user by ID: $userId")
 
-                // Check cache first με fresh bookmark status
+                // Check cache first with fresh bookmark status
                 userCache[userId]?.let { cachedUser ->
                     Timber.d("✅ Found user in cache: ${cachedUser.getDisplayName()}")
                     val isBookmarked = try {
@@ -123,7 +173,7 @@ class UserRepositoryImpl(
                 if (bookmarkedUser != null) {
                     Timber.d("✅ Found bookmarked user: ${bookmarkedUser.firstName}")
                     val user = bookmarkedUser.toDomainModel()
-                    userCache[userId] = user // Cache για future
+                    userCache[userId] = user
                     Result.Success(user)
                 } else {
                     Timber.w("❌ User $userId not found")
@@ -212,12 +262,12 @@ class UserRepositoryImpl(
                 jumpThreshold = Int.MIN_VALUE
             ),
             pagingSourceFactory = {
-                UserPagingSource(api, bookmarkDao)
+                UserPagingSource(api, bookmarkDao, networkProvider)
             }
         ).flow
             .map { pagingData ->
                 pagingData.map { user ->
-                    // Cache για navigation
+                    // Cache for navigation
                     if (user.isValid() && !user.id.isNullOrBlank()) {
                         userCache[user.id] = user
                     }

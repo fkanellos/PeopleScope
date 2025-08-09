@@ -10,7 +10,10 @@ import gr.pkcoding.peoplescope.presentation.base.ViewState
 data class UserListState(
     val isRefreshing: Boolean = false,
     val searchQuery: String = "",
-    val cachedUsers: List<User> = emptyList()
+    val cachedUsers: List<User> = emptyList(),
+    val isOnline: Boolean = true,
+    val isOfflineMode: Boolean = false,
+    val showNetworkError: Boolean = false
 ) : ViewState
 
 // Extension function for Result

@@ -43,7 +43,6 @@ fun PeopleScopeNavGraph(
             viewModel.effect.CollectAsEffect { effect ->
                 when (effect) {
                     is UserListEffect.NavigateToUserDetail -> {
-                        // ✅ Safe navigation με null check
                         val userId = effect.user.id
                         if (!userId.isNullOrBlank()) {
                             Timber.d("🚀 Navigating to user detail: $userId")

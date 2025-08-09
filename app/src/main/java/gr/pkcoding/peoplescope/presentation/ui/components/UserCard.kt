@@ -57,7 +57,6 @@ fun UserCard(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // ✅ Avatar με better error handling
             AsyncImage(
                 model = avatarUrl,
                 contentDescription = "$displayName avatar",

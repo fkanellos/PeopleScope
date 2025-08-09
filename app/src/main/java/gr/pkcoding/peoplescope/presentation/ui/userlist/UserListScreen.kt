@@ -15,8 +15,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -34,12 +36,15 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
 import gr.pkcoding.peoplescope.R
+import gr.pkcoding.peoplescope.data.mapper.isNetworkRelatedError
 import gr.pkcoding.peoplescope.domain.model.User
-import gr.pkcoding.peoplescope.presentation.ui.components.ErrorView
+import gr.pkcoding.peoplescope.presentation.ui.components.error_views.ErrorView
 import gr.pkcoding.peoplescope.presentation.ui.components.GradientBackground
 import gr.pkcoding.peoplescope.presentation.ui.components.LoadingView
 import gr.pkcoding.peoplescope.presentation.ui.components.SearchBar
 import gr.pkcoding.peoplescope.presentation.ui.components.UserCard
+import gr.pkcoding.peoplescope.presentation.ui.components.error_views.NetworkStatusBar
+import gr.pkcoding.peoplescope.presentation.ui.components.error_views.NoInternetErrorView
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -99,6 +104,9 @@ fun UserListScreen(
     )
 
     Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .systemBarsPadding(),
         topBar = {
             Column(
                 Modifier
@@ -106,6 +114,10 @@ fun UserListScreen(
                     .background(MaterialTheme.colorScheme.primary)
                     .zIndex(1f)
             ) {
+                NetworkStatusBar(
+                    isOnline = state.isOnline,
+                    isOfflineMode = state.isOfflineMode
+                )
                 Box(
                     Modifier
                         .fillMaxWidth()
@@ -165,7 +177,7 @@ fun UserListScreen(
 private fun UserListContent(
     lazyPagingItems: LazyPagingItems<User>,
     onIntent: (UserListIntent) -> Unit,
-    listState: LazyListState
+    listState: LazyListState,
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -199,10 +211,17 @@ private fun UserListContent(
 
             lazyPagingItems.loadState.refresh is LoadState.Error && lazyPagingItems.itemCount == 0 -> {
                 val error = (lazyPagingItems.loadState.refresh as LoadState.Error).error
-                ErrorView(
-                    message = error.localizedMessage ?: "An error occurred",
-                    onRetry = { lazyPagingItems.retry() }
-                )
+
+                if (error.isNetworkRelatedError()) {
+                    NoInternetErrorView(
+                        onRetry = { lazyPagingItems.retry() }
+                    )
+                } else {
+                    ErrorView(
+                        message = error.localizedMessage ?: "An error occurred",
+                        onRetry = { lazyPagingItems.retry() }
+                    )
+                }
             }
 
             else -> {
@@ -251,19 +270,35 @@ private fun UserListContent(
 
                         is LoadState.Error -> {
                             item {
-                                Box(
+                                // ✅ FIXED: Χρησιμοποιούμε το υπάρχον ErrorView
+                                Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(16.dp),
-                                    contentAlignment = Alignment.Center
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.errorContainer
+                                    )
                                 ) {
-                                    TextButton(
-                                        onClick = { lazyPagingItems.retry() },
-                                        colors = ButtonDefaults.textButtonColors(
-                                            contentColor = MaterialTheme.colorScheme.error
-                                        )
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
-                                        Text("Retry")
+                                        Text(
+                                            text = "Failed to load more users",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+
+                                        Spacer(modifier = Modifier.height(8.dp))
+
+                                        TextButton(
+                                            onClick = { lazyPagingItems.retry() },
+                                            colors = ButtonDefaults.textButtonColors(
+                                                contentColor = MaterialTheme.colorScheme.error
+                                            )
+                                        ) {
+                                            Text("🔄 Retry")
+                                        }
                                     }
                                 }
                             }

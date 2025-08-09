@@ -2,6 +2,8 @@ package gr.pkcoding.peoplescope.di
 
 import androidx.room.Room
 import gr.pkcoding.peoplescope.data.local.database.AppDatabase
+import gr.pkcoding.peoplescope.data.network.NetworkConnectivityManager
+import gr.pkcoding.peoplescope.data.network.NetworkConnectivityProvider
 import gr.pkcoding.peoplescope.data.paging.UserPagingSource
 import gr.pkcoding.peoplescope.data.remote.NetworkModule
 import gr.pkcoding.peoplescope.data.remote.api.RandomUserApi
@@ -17,6 +19,10 @@ val dataModule = module {
     single { NetworkModule.provideRetrofit(get()) }
     single<RandomUserApi> { get<Retrofit>().create(RandomUserApi::class.java) }
 
+    single<NetworkConnectivityProvider> {
+        NetworkConnectivityManager(androidContext())
+    }
+
     // Database dependencies
     single {
         Room.databaseBuilder(
@@ -28,8 +34,14 @@ val dataModule = module {
     single { get<AppDatabase>().bookmarkDao() }
 
     // Paging Source
-    factory { UserPagingSource(get(), get()) }
+    factory { UserPagingSource(get(), get(), get<NetworkConnectivityProvider>()) }
 
     // Repository
-    single<UserRepository> { UserRepositoryImpl(get(), get()) }
+    single<UserRepository> {
+        UserRepositoryImpl(
+            api = get(),
+            bookmarkDao = get(),
+            networkProvider = get<NetworkConnectivityProvider>()
+        )
+    }
 }

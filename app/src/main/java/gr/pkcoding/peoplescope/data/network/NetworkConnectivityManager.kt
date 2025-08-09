@@ -1,22 +1,28 @@
-package gr.pkcoding.peoplescope.domain
+package gr.pkcoding.peoplescope.data.network
 
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import androidx.core.content.getSystemService
-import gr.pkcoding.peoplescope.domain.model.DataError
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import timber.log.Timber
 
-class NetworkConnectivityManager(private val context: Context) {
+interface NetworkConnectivityProvider {
+    fun isNetworkAvailable(): Boolean
+    fun networkConnectivityFlow(): Flow<Boolean>
+}
+
+class NetworkConnectivityManager(
+    private val context: Context // ✅ ΜΟΝΟ εδώ χρειάζεται Context
+) : NetworkConnectivityProvider {
 
     private val connectivityManager = context.getSystemService<ConnectivityManager>()
 
-    fun isNetworkAvailable(): Boolean {
+    override fun isNetworkAvailable(): Boolean {
         return try {
             val network = connectivityManager?.activeNetwork
             val capabilities = connectivityManager?.getNetworkCapabilities(network)
@@ -30,7 +36,7 @@ class NetworkConnectivityManager(private val context: Context) {
     /**
      * Flow that emits network connectivity changes
      */
-    fun networkConnectivityFlow(): Flow<Boolean> = callbackFlow {
+    override fun networkConnectivityFlow(): Flow<Boolean> = callbackFlow {
         val callback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 trySend(true)

@@ -1,4 +1,4 @@
-package gr.pkcoding.peoplescope.presentation.ui.components
+package gr.pkcoding.peoplescope.presentation.ui.components.error_views
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons

@@ -34,7 +34,7 @@ import coil.compose.AsyncImage
 import gr.pkcoding.peoplescope.R
 import gr.pkcoding.peoplescope.domain.model.*
 import gr.pkcoding.peoplescope.presentation.ui.components.BookmarkButton
-import gr.pkcoding.peoplescope.presentation.ui.components.ErrorView
+import gr.pkcoding.peoplescope.presentation.ui.components.error_views.ErrorView
 import gr.pkcoding.peoplescope.presentation.ui.components.GradientBackground
 import gr.pkcoding.peoplescope.presentation.ui.components.LoadingView
 import gr.pkcoding.peoplescope.ui.theme.PeopleScopeTheme
@@ -88,6 +88,9 @@ fun UserDetailScreen(
     }
 
     Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .systemBarsPadding(),
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.user_details_title)) },
