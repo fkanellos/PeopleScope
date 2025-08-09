@@ -82,6 +82,7 @@ fun UserDto.toDomainModel(): User? {
 /**
  * Maps list of UserDto to list of domain User models
  */
+//todo delete?
 fun List<UserDto>.toDomainModels(): List<User> {
     Timber.d("Mapping ${this.size} UserDto objects")
 

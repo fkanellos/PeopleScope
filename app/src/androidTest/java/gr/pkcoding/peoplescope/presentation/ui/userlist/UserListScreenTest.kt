@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.paging.PagingData
 import gr.pkcoding.peoplescope.data.local.dao.BookmarkDao
 import gr.pkcoding.peoplescope.data.local.entity.BookmarkedUserEntity
+import gr.pkcoding.peoplescope.data.network.NetworkConnectivityProvider
 import gr.pkcoding.peoplescope.domain.model.*
 import gr.pkcoding.peoplescope.domain.usecase.GetUsersPagedUseCase
 import gr.pkcoding.peoplescope.domain.usecase.ToggleBookmarkUseCase
@@ -26,6 +27,7 @@ class UserListScreenUITest {
     private lateinit var toggleBookmarkUseCase: ToggleBookmarkUseCase
     private lateinit var viewModel: UserListViewModel
     private lateinit var bookmarkDao: BookmarkDao
+    private lateinit var networkProvider: NetworkConnectivityProvider // ✅ ADD: Network provider
 
     private val testUsers = listOf(
         User(
@@ -78,6 +80,11 @@ class UserListScreenUITest {
         getUsersPagedUseCase = mockk()
         toggleBookmarkUseCase = mockk()
         bookmarkDao = mockk()
+        networkProvider = mockk() // ✅ ADD: Mock network provider
+
+        // ✅ ADD: Setup network provider mocks
+        every { networkProvider.isNetworkAvailable() } returns true
+        every { networkProvider.networkConnectivityFlow() } returns flowOf(true)
 
         // CRITICAL: Mock the Flow methods that ViewModel observes
         every { bookmarkDao.getAllBookmarkedUsers() } returns flowOf(emptyList<BookmarkedUserEntity>())
@@ -87,7 +94,8 @@ class UserListScreenUITest {
         viewModel = UserListViewModel(
             getUsersPagedUseCase = getUsersPagedUseCase,
             toggleBookmarkUseCase = toggleBookmarkUseCase,
-            bookmarkDao = bookmarkDao
+            bookmarkDao = bookmarkDao,
+            networkProvider = networkProvider // ✅ ADD: Pass network provider
         )
     }
 
@@ -254,5 +262,73 @@ class UserListScreenUITest {
             .onNodeWithContentDescription("Clear search")
             .assertIsDisplayed()
             .assertHasClickAction()
+    }
+
+    // ✅ ADD: Test for online/offline status
+    @Test
+    fun userListScreen_displaysNetworkStatus_whenOffline() {
+        // ✅ Setup offline state
+        every { networkProvider.isNetworkAvailable() } returns false
+        every { networkProvider.networkConnectivityFlow() } returns flowOf(false)
+        every { bookmarkDao.getAllBookmarkedUsers() } returns flowOf(
+            listOf(
+                BookmarkedUserEntity(
+                    id = "offline-1",
+                    gender = "male",
+                    title = "Mr",
+                    firstName = "Offline",
+                    lastName = "User",
+                    email = "offline@example.com",
+                    phone = "+1234567890",
+                    cell = "+0987654321",
+                    pictureLarge = "large.jpg",
+                    pictureMedium = "medium.jpg",
+                    pictureThumbnail = "thumb.jpg",
+                    streetNumber = 123,
+                    streetName = "Street",
+                    city = "City",
+                    state = "State",
+                    country = "Country",
+                    postcode = "12345",
+                    latitude = "0",
+                    longitude = "0",
+                    timezoneOffset = "+0",
+                    timezoneDescription = "UTC",
+                    dobDate = "1990-01-01",
+                    dobAge = 33,
+                    nationality = "US",
+                    bookmarkedAt = System.currentTimeMillis()
+                )
+            )
+        )
+
+        viewModel = UserListViewModel(
+            getUsersPagedUseCase = getUsersPagedUseCase,
+            toggleBookmarkUseCase = toggleBookmarkUseCase,
+            bookmarkDao = bookmarkDao,
+            networkProvider = networkProvider
+        )
+
+        composeTestRule.setContent {
+            PeopleScopeTheme {
+                UserListScreen(
+                    state = UserListState(
+                        isOnline = false,
+                        isOfflineMode = true,
+                        showNetworkError = false
+                    ),
+                    onIntent = {},
+                    viewModel = viewModel
+                )
+            }
+        }
+
+        // Wait for content to load
+        composeTestRule.waitForIdle()
+
+        // Check if offline mode indicator is displayed
+        composeTestRule
+            .onNodeWithText("📱 Showing bookmarked users")
+            .assertIsDisplayed()
     }
 }

@@ -4,6 +4,7 @@ import androidx.paging.PagingData
 import app.cash.turbine.test
 import gr.pkcoding.peoplescope.data.local.dao.BookmarkDao
 import gr.pkcoding.peoplescope.data.local.entity.BookmarkedUserEntity
+import gr.pkcoding.peoplescope.data.network.NetworkConnectivityProvider
 import gr.pkcoding.peoplescope.domain.model.*
 import gr.pkcoding.peoplescope.domain.usecase.GetUsersPagedUseCase
 import gr.pkcoding.peoplescope.domain.usecase.ToggleBookmarkUseCase
@@ -31,6 +32,7 @@ class UserListViewModelTest {
     private lateinit var toggleBookmarkUseCase: ToggleBookmarkUseCase
     private lateinit var viewModel: UserListViewModel
     private lateinit var bookmarkDao: BookmarkDao
+    private lateinit var networkProvider: NetworkConnectivityProvider
 
     private val testUser = User(
         id = "test-id",
@@ -62,6 +64,11 @@ class UserListViewModelTest {
         getUsersPagedUseCase = mockk()
         toggleBookmarkUseCase = mockk()
         bookmarkDao = mockk()
+        networkProvider = mockk() // ✅ ADD: Mock the network provider
+
+        // ✅ CRITICAL: Mock network provider flows
+        every { networkProvider.isNetworkAvailable() } returns true
+        every { networkProvider.networkConnectivityFlow() } returns flowOf(true)
 
         // CRITICAL: Mock the Flow that ViewModel observes in init block
         every { bookmarkDao.getAllBookmarkedUsers() } returns flowOf(emptyList<BookmarkedUserEntity>())
@@ -71,7 +78,8 @@ class UserListViewModelTest {
         viewModel = UserListViewModel(
             getUsersPagedUseCase = getUsersPagedUseCase,
             toggleBookmarkUseCase = toggleBookmarkUseCase,
-            bookmarkDao = bookmarkDao
+            bookmarkDao = bookmarkDao,
+            networkProvider = networkProvider // ✅ ADD: Pass network provider
         )
     }
 
@@ -88,6 +96,7 @@ class UserListViewModelTest {
         val initialState = viewModel.state.first()
         assertEquals("", initialState.searchQuery)
         assertEquals(false, initialState.isRefreshing)
+        assertEquals(true, initialState.isOnline) // ✅ ADD: Check network state
     }
 
     @Test
@@ -168,7 +177,8 @@ class UserListViewModelTest {
         viewModel = UserListViewModel(
             getUsersPagedUseCase = getUsersPagedUseCase,
             toggleBookmarkUseCase = toggleBookmarkUseCase,
-            bookmarkDao = bookmarkDao
+            bookmarkDao = bookmarkDao,
+            networkProvider = networkProvider // ✅ ADD: Don't forget network provider
         )
 
         advanceUntilIdle()
@@ -177,5 +187,107 @@ class UserListViewModelTest {
 
         val state = viewModel.state.first()
         assertEquals("John", state.searchQuery)
+    }
+
+    // ✅ ADD: New test for network state handling
+    @Test
+    fun `network state changes should update ViewModel state`() = testScope.runTest {
+        // Given - Start with online state
+        every { networkProvider.networkConnectivityFlow() } returns flowOf(true, false, true)
+
+        // Create ViewModel
+        viewModel = UserListViewModel(
+            getUsersPagedUseCase = getUsersPagedUseCase,
+            toggleBookmarkUseCase = toggleBookmarkUseCase,
+            bookmarkDao = bookmarkDao,
+            networkProvider = networkProvider
+        )
+
+        advanceUntilIdle()
+
+        viewModel.state.test {
+            val initialState = awaitItem()
+            assertEquals(true, initialState.isOnline)
+            assertEquals(false, initialState.isOfflineMode)
+            assertEquals(false, initialState.showNetworkError)
+        }
+    }
+
+    // ✅ ADD: Test offline mode with bookmarks
+    @Test
+    fun `offline mode should be enabled when no internet but has bookmarks`() = testScope.runTest {
+        // Given - Offline with bookmarks
+        every { networkProvider.isNetworkAvailable() } returns false
+        every { networkProvider.networkConnectivityFlow() } returns flowOf(false)
+        every { bookmarkDao.getAllBookmarkedUsers() } returns flowOf(
+            listOf(
+                BookmarkedUserEntity(
+                    id = "bookmark-1",
+                    gender = "male",
+                    title = "Mr",
+                    firstName = "Offline",
+                    lastName = "User",
+                    email = "offline@example.com",
+                    phone = "+1234567890",
+                    cell = "+0987654321",
+                    pictureLarge = "large.jpg",
+                    pictureMedium = "medium.jpg",
+                    pictureThumbnail = "thumb.jpg",
+                    streetNumber = 123,
+                    streetName = "Street",
+                    city = "City",
+                    state = "State",
+                    country = "Country",
+                    postcode = "12345",
+                    latitude = "0",
+                    longitude = "0",
+                    timezoneOffset = "+0",
+                    timezoneDescription = "UTC",
+                    dobDate = "1990-01-01",
+                    dobAge = 33,
+                    nationality = "US",
+                    bookmarkedAt = System.currentTimeMillis()
+                )
+            )
+        )
+
+        // Create ViewModel
+        viewModel = UserListViewModel(
+            getUsersPagedUseCase = getUsersPagedUseCase,
+            toggleBookmarkUseCase = toggleBookmarkUseCase,
+            bookmarkDao = bookmarkDao,
+            networkProvider = networkProvider
+        )
+
+        advanceUntilIdle()
+
+        val state = viewModel.state.first()
+        assertEquals(false, state.isOnline)
+        assertEquals(true, state.isOfflineMode) // Should enable offline mode
+        assertEquals(false, state.showNetworkError)
+    }
+
+    // ✅ ADD: Test network error when no internet and no bookmarks
+    @Test
+    fun `network error should be shown when no internet and no bookmarks`() = testScope.runTest {
+        // Given - Offline without bookmarks
+        every { networkProvider.isNetworkAvailable() } returns false
+        every { networkProvider.networkConnectivityFlow() } returns flowOf(false)
+        every { bookmarkDao.getAllBookmarkedUsers() } returns flowOf(emptyList())
+
+        // Create ViewModel
+        viewModel = UserListViewModel(
+            getUsersPagedUseCase = getUsersPagedUseCase,
+            toggleBookmarkUseCase = toggleBookmarkUseCase,
+            bookmarkDao = bookmarkDao,
+            networkProvider = networkProvider
+        )
+
+        advanceUntilIdle()
+
+        val state = viewModel.state.first()
+        assertEquals(false, state.isOnline)
+        assertEquals(false, state.isOfflineMode)
+        assertEquals(true, state.showNetworkError) // Should show network error
     }
 }

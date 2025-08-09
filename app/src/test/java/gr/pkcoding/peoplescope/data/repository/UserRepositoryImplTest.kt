@@ -2,6 +2,7 @@ package gr.pkcoding.peoplescope.data.repository
 
 import gr.pkcoding.peoplescope.data.local.dao.BookmarkDao
 import gr.pkcoding.peoplescope.data.local.entity.BookmarkedUserEntity
+import gr.pkcoding.peoplescope.data.network.NetworkConnectivityProvider
 import gr.pkcoding.peoplescope.data.remote.api.RandomUserApi
 import gr.pkcoding.peoplescope.data.remote.dto.*
 import gr.pkcoding.peoplescope.domain.model.*
@@ -22,6 +23,7 @@ class UserRepositoryImplTest {
     private lateinit var api: RandomUserApi
     private lateinit var bookmarkDao: BookmarkDao
     private lateinit var repository: UserRepositoryImpl
+    private lateinit var networkProvider: NetworkConnectivityProvider // ✅ ADD: Network provider
 
     private val testUserDto = UserDto(
         gender = "male",
@@ -85,14 +87,21 @@ class UserRepositoryImplTest {
     fun setup() {
         api = mockk()
         bookmarkDao = mockk()
-        repository = UserRepositoryImpl(api, bookmarkDao)
+        networkProvider = mockk() // ✅ ADD: Mock network provider
+
+        // ✅ ADD: Setup default network state (online)
+        every { networkProvider.isNetworkAvailable() } returns true
+        every { networkProvider.networkConnectivityFlow() } returns flowOf(true)
+
+        // ✅ FIX: Pass all required parameters
+        repository = UserRepositoryImpl(api, bookmarkDao, networkProvider)
     }
 
     @Test
     fun `getUsers should return success when api call succeeds`() = runTest {
         // Given
         coEvery { api.getUsers(1, 25) } returns testUserResponse
-        coEvery { bookmarkDao.getBookmarkedUserById(any()) } returns null
+        coEvery { bookmarkDao.getBookmarkedUserIds() } returns emptyList() // ✅ FIX: Use correct method
 
         // When
         val result = repository.getUsers(1, 25)
@@ -105,19 +114,72 @@ class UserRepositoryImplTest {
         assertFalse(users?.first()?.isBookmarked ?: true)
     }
 
+    // ✅ REPLACE the failing test in UserRepositoryImplTest.kt with this version:
+
     @Test
-    fun `getUsers should return error when api call fails`() = runTest {
-        // Given
-        coEvery { api.getUsers(1, 25) } throws UnknownHostException()
+    fun `getUsers should return error when api call fails on page 2`() = runTest {
+        // Given - API fails on page 2 (no fallback)
+        coEvery { api.getUsers(2, 25) } throws UnknownHostException()
+        every { bookmarkDao.getAllBookmarkedUsers() } returns flowOf(emptyList())
 
-        // When
-        val result = repository.getUsers(1, 25)
+        // When - Request page 2
+        val result = repository.getUsers(2, 25)
 
-        // Then
+        // Then - Should return error (no fallback for page > 1)
         assertTrue(result is Result.Error)
         val error = (result as Result.Error).error
         assertTrue(error is DataError.Network)
         assertEquals(NetworkError.NO_INTERNET, (error as DataError.Network).error)
+    }
+
+    // ✅ ADD this new test that shows the fallback behavior:
+    @Test
+    fun `getUsers should fallback to bookmarks when api call fails on page 1`() = runTest {
+        // Given - API fails on page 1, but we have bookmarked users
+        coEvery { api.getUsers(1, 25) } throws UnknownHostException()
+
+        val bookmarkedUsers = listOf(
+            BookmarkedUserEntity(
+                id = "fallback-user",
+                gender = "male",
+                title = "Mr",
+                firstName = "Fallback",
+                lastName = "User",
+                email = "fallback@example.com",
+                phone = "+1234567890",
+                cell = "+0987654321",
+                pictureLarge = "large.jpg",
+                pictureMedium = "medium.jpg",
+                pictureThumbnail = "thumb.jpg",
+                streetNumber = 123,
+                streetName = "Street",
+                city = "City",
+                state = "State",
+                country = "Country",
+                postcode = "12345",
+                latitude = "0",
+                longitude = "0",
+                timezoneOffset = "+0",
+                timezoneDescription = "UTC",
+                dobDate = "1990-01-01",
+                dobAge = 33,
+                nationality = "US",
+                bookmarkedAt = System.currentTimeMillis()
+            )
+        )
+
+        every { bookmarkDao.getAllBookmarkedUsers() } returns flowOf(bookmarkedUsers)
+
+        // When - Request page 1
+        val result = repository.getUsers(1, 25)
+
+        // Then - Should return bookmarked users as fallback (Success)
+        assertTrue("Should fallback to bookmarks successfully", result is Result.Success)
+        val users = result.getOrNull()
+        assertNotNull("Fallback users should not be null", users)
+        assertEquals("Should return fallback users", 1, users!!.size)
+        assertEquals("Should return correct fallback user", "Fallback", users.first().name?.first)
+        assertTrue("Fallback user should be bookmarked", users.first().isBookmarked)
     }
 
     @Test
@@ -218,6 +280,7 @@ class UserRepositoryImplTest {
         // ✅ Με τη νέα validation, user με null last name θα φιλτραριστεί
         assertTrue("Invalid users should be filtered out", users!!.isEmpty())
     }
+
     @Test
     fun `toggleBookmark should handle null user ID gracefully`() = runTest {
         // Given - User με null ID
@@ -246,6 +309,7 @@ class UserRepositoryImplTest {
         val error = (result as Result.Error).error
         assertTrue(error is UserError.UserNotFound)
     }
+
     @Test
     fun `getUserById should return user if bookmarked`() = runTest {
         // Given
@@ -436,6 +500,7 @@ class UserRepositoryImplTest {
         )
 
         coEvery { bookmarkDao.getBookmarkedUserById("test-uuid") } returns bookmarkedEntity
+        coEvery { bookmarkDao.getBookmarkedUserIds() } returns listOf("test-uuid") // ✅ FIX: Add this
 
         // Populate cache first
         repository.getUsers(1, 25)
@@ -452,5 +517,138 @@ class UserRepositoryImplTest {
 
         // Verify that we checked the bookmark status
         coVerify { bookmarkDao.getBookmarkedUserById("test-uuid") }
+    }
+
+    // ✅ ADD: New tests for network scenarios
+    @Test
+    fun `getUsers should return offline users when no network available`() = runTest {
+        // Given - No network available
+        every { networkProvider.isNetworkAvailable() } returns false
+
+        val offlineUsers = listOf(
+            BookmarkedUserEntity(
+                id = "offline-user",
+                gender = "male",
+                title = "Mr",
+                firstName = "Offline",
+                lastName = "User",
+                email = "offline@example.com",
+                phone = "+1234567890",
+                cell = "+0987654321",
+                pictureLarge = "large.jpg",
+                pictureMedium = "medium.jpg",
+                pictureThumbnail = "thumb.jpg",
+                streetNumber = 123,
+                streetName = "Street",
+                city = "City",
+                state = "State",
+                country = "Country",
+                postcode = "12345",
+                latitude = "0",
+                longitude = "0",
+                timezoneOffset = "+0",
+                timezoneDescription = "UTC",
+                dobDate = "1990-01-01",
+                dobAge = 33,
+                nationality = "US",
+                bookmarkedAt = System.currentTimeMillis()
+            )
+        )
+
+        every { bookmarkDao.getAllBookmarkedUsers() } returns flowOf(offlineUsers)
+
+        // When
+        val result = repository.getUsers(1, 25)
+
+        // Then
+        assertTrue("Should succeed in offline mode", result is Result.Success)
+        val users = result.getOrNull()
+        assertNotNull("Users should not be null", users)
+        assertEquals("Should return offline users", 1, users!!.size)
+        assertEquals("Should return correct offline user", "Offline", users.first().name?.first)
+        assertTrue("Offline user should be bookmarked", users.first().isBookmarked)
+    }
+
+    @Test
+    fun `getUsers should return empty list when offline and no bookmarks`() = runTest {
+        // Given - No network and no bookmarks
+        every { networkProvider.isNetworkAvailable() } returns false
+        every { bookmarkDao.getAllBookmarkedUsers() } returns flowOf(emptyList())
+
+        // When
+        val result = repository.getUsers(1, 25)
+
+        // Then
+        assertTrue("Should succeed even with no data", result is Result.Success)
+        val users = result.getOrNull()
+        assertNotNull("Users should not be null", users)
+        assertTrue("Should return empty list", users!!.isEmpty())
+    }
+
+    @Test
+    fun `getUsers should fallback to bookmarks when network call fails on first page`() = runTest {
+        // Given - Network available but API fails
+        every { networkProvider.isNetworkAvailable() } returns true
+        coEvery { api.getUsers(1, 25) } throws UnknownHostException()
+
+        val bookmarkedUsers = listOf(
+            BookmarkedUserEntity(
+                id = "fallback-user",
+                gender = "female",
+                title = "Ms",
+                firstName = "Fallback",
+                lastName = "User",
+                email = "fallback@example.com",
+                phone = "+1234567890",
+                cell = "+0987654321",
+                pictureLarge = "large.jpg",
+                pictureMedium = "medium.jpg",
+                pictureThumbnail = "thumb.jpg",
+                streetNumber = 123,
+                streetName = "Street",
+                city = "City",
+                state = "State",
+                country = "Country",
+                postcode = "12345",
+                latitude = "0",
+                longitude = "0",
+                timezoneOffset = "+0",
+                timezoneDescription = "UTC",
+                dobDate = "1990-01-01",
+                dobAge = 33,
+                nationality = "US",
+                bookmarkedAt = System.currentTimeMillis()
+            )
+        )
+
+        every { bookmarkDao.getAllBookmarkedUsers() } returns flowOf(bookmarkedUsers)
+
+        // When - First page should fallback to bookmarks
+        val result = repository.getUsers(1, 25)
+
+        // Then
+        assertTrue("Should fallback to bookmarks successfully", result is Result.Success)
+        val users = result.getOrNull()
+        assertNotNull("Fallback users should not be null", users)
+        assertEquals("Should return fallback users", 1, users!!.size)
+        assertEquals("Should return correct fallback user", "Fallback", users.first().name?.first)
+        assertTrue("Fallback user should be bookmarked", users.first().isBookmarked)
+    }
+
+    @Test
+    fun `getUsers should return network error for subsequent pages when network fails`() = runTest {
+        // Given - Network available but API fails for page 2
+        every { networkProvider.isNetworkAvailable() } returns true
+        coEvery { api.getUsers(2, 25) } throws UnknownHostException()
+        every { bookmarkDao.getAllBookmarkedUsers() } returns flowOf(emptyList())
+
+        // When - Second page should return network error
+        val result = repository.getUsers(2, 25)
+
+        // Then
+        assertTrue("Should return network error for subsequent pages", result is Result.Error)
+        val error = (result as Result.Error).error
+        assertTrue("Error should be network related", error is DataError.Network)
+        assertEquals("Should be NO_INTERNET error", NetworkError.NO_INTERNET, (error as DataError.Network).error)
     }
 }
