@@ -1,9 +1,15 @@
 package gr.pkcoding.peoplescope.utils
 
+import android.app.Activity
 import android.content.Context
+import android.os.Build
+import android.view.View
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
@@ -62,4 +68,23 @@ fun Context.showToast(
 @OptIn(FlowPreview::class)
 fun <T> Flow<T>.debounceSearch(timeoutMillis: Long = Constants.SEARCH_DEBOUNCE_MS): Flow<T> {
     return this.debounce(timeoutMillis)
+}
+
+fun Activity.enableImmersiveMode() {
+    WindowCompat.setDecorFitsSystemWindows(window, false)
+
+    window.decorView.post {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val controller = window.insetsController
+            controller?.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
+            controller?.systemBarsBehavior =
+                WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility =
+                (View.SYSTEM_UI_FLAG_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
+        }
+    }
 }

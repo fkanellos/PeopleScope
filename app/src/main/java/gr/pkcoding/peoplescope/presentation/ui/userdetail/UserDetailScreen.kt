@@ -52,30 +52,27 @@ fun UserDetailScreen(
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
 
-    // ✅ Extract values to local variables για smart cast
     val currentUser = state.user
     val currentError = state.error
 
-    // ✅ Memoized copy actions με safe null checks
-    val copyEmail = remember(currentUser?.email) {
+    // ✅ Memoized copyEmail
+    val onCopyEmail = remember(currentUser?.email) {
         {
             currentUser?.email?.takeIf { it.isNotBlank() }?.let { email ->
                 clipboardManager.setText(AnnotatedString(email))
                 context.showToast("📧 Email copied to clipboard")
                 Timber.d("📋 Email copied: $email")
-            } ?: run {
-                context.showToast("No email available")
-            }
+            } ?: context.showToast("No email available")
         }
     }
 
-    val copyPhone = remember(currentUser?.phone, currentUser?.cell) {
+    // ✅ Memoized copyPhone
+    val onCopyPhone = remember(currentUser?.phone, currentUser?.cell) {
         {
             val phoneNumbers = listOfNotNull(
                 currentUser?.phone?.takeIf { it.isNotBlank() },
                 currentUser?.cell?.takeIf { it.isNotBlank() }
             )
-
             if (phoneNumbers.isNotEmpty()) {
                 val phoneText = phoneNumbers.joinToString(" • ")
                 clipboardManager.setText(AnnotatedString(phoneText))
@@ -87,10 +84,20 @@ fun UserDetailScreen(
         }
     }
 
+    val onToggleBookmark = remember(onIntent) {
+        { onIntent(UserDetailIntent.ToggleBookmark) }
+    }
+
+    val onRetryLoadUser = remember(onIntent, currentUser?.id) {
+        {
+            currentUser?.id?.let { userId ->
+                onIntent(UserDetailIntent.LoadUser(userId))
+            } ?: Unit
+        }
+    }
+
+
     Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .systemBarsPadding(),
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.user_details_title)) },
@@ -118,12 +125,7 @@ fun UserDetailScreen(
                 currentError != null -> {
                     ErrorView(
                         message = currentError.asString(),
-                        onRetry = {
-                            // ✅ Safe retry με null check
-                            currentUser?.id?.let { userId ->
-                                onIntent(UserDetailIntent.LoadUser(userId))
-                            }
-                        }
+                        onRetry = onRetryLoadUser
                     )
                 }
 
@@ -131,9 +133,9 @@ fun UserDetailScreen(
                     UserDetailContent(
                         user = currentUser,
                         isBookmarked = state.isBookmarked,
-                        onBookmarkClick = { onIntent(UserDetailIntent.ToggleBookmark) },
-                        onCopyEmail = copyEmail,
-                        onCopyPhone = copyPhone
+                        onBookmarkClick = onToggleBookmark,
+                        onCopyEmail = onCopyEmail,
+                        onCopyPhone = onCopyPhone
                     )
                 }
             }

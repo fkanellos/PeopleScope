@@ -86,7 +86,7 @@ fun UserListScreen(
 
 
     val appBarHeight by animateDpAsState(
-        targetValue = if (showFullTopAppBar) 80.dp else 0.dp,
+        targetValue = if (showFullTopAppBar) 60.dp else 0.dp,
         animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing),
         label = "appBarHeight"
     )
@@ -104,9 +104,6 @@ fun UserListScreen(
     )
 
     Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .systemBarsPadding(),
         topBar = {
             Column(
                 Modifier
@@ -126,7 +123,11 @@ fun UserListScreen(
                 ) {
                     if (appBarHeight > 0.dp) {
                         TopAppBar(
-                            title = { Text(stringResource(topAppBarTitleResId)) },
+                            title = { Text(
+                                text = stringResource(topAppBarTitleResId),
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .wrapContentHeight(Alignment.CenterVertically)) },
                             colors = TopAppBarDefaults.topAppBarColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
                                 titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
