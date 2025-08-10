@@ -140,6 +140,8 @@ dependencies {
     androidTestImplementation(libs.mockk.android)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.rules)
+    // Testing - Navigation
+    androidTestImplementation("androidx.navigation:navigation-testing:${libs.versions.navigationCompose.get()}")
 
     // Debug
     debugImplementation(libs.androidx.compose.ui.tooling)

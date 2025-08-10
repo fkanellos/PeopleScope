@@ -292,7 +292,8 @@ class UserRepositoryImplTest {
         // Then
         assertTrue(result is Result.Error)
         val error = (result as Result.Error).error
-        assertTrue(error is DataError.Local)
+        // ✅ Αφαιρέθηκε το redundant check - το error είναι ήδη DataError.Local από το method signature
+        assertEquals(LocalError.DATABASE_ERROR, error.error)
     }
 
     @Test

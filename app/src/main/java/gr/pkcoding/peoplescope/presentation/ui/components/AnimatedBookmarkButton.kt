@@ -74,10 +74,10 @@ fun AnimatedBookmarkButton(
                             dampingRatio = Spring.DampingRatioLowBouncy,
                             stiffness = Spring.StiffnessLow
                         )
-                    ) + fadeIn() with scaleOut() + fadeOut()
+                    ) + fadeIn() togetherWith  scaleOut() + fadeOut()
                 } else {
                     // Exiting animation
-                    scaleIn() + fadeIn() with scaleOut() + fadeOut()
+                    scaleIn() + fadeIn() togetherWith scaleOut() + fadeOut()
                 }
             },
             contentAlignment = Alignment.Center,

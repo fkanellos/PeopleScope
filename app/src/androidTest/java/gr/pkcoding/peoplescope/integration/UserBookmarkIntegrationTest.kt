@@ -5,7 +5,6 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import gr.pkcoding.peoplescope.data.local.dao.BookmarkDao
 import gr.pkcoding.peoplescope.data.local.database.AppDatabase
-import gr.pkcoding.peoplescope.data.local.entity.BookmarkedUserEntity
 import gr.pkcoding.peoplescope.data.mapper.toBookmarkedEntity
 import gr.pkcoding.peoplescope.data.mapper.toDomainModel
 import gr.pkcoding.peoplescope.data.network.NetworkConnectivityProvider

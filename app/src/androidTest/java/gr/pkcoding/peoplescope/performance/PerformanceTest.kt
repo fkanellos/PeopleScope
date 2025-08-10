@@ -8,6 +8,7 @@ import gr.pkcoding.peoplescope.domain.model.*
 import gr.pkcoding.peoplescope.domain.usecase.GetUsersPagedUseCase
 import gr.pkcoding.peoplescope.domain.usecase.ToggleBookmarkUseCase
 import gr.pkcoding.peoplescope.presentation.ui.userlist.UserListViewModel
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -100,7 +101,6 @@ class PerformanceTest {
         // Then - Initialization should be reasonably fast (under 2 seconds)
         assertTrue("ViewModel initialization should be fast (was ${initTime}ms)", initTime < 2000)
     }
-
     @Test
     fun userListViewModel_searchFiltering_withLargeDataset_performsWell() = testScope.runTest {
         // Given - Large dataset and ViewModel
@@ -158,7 +158,11 @@ class PerformanceTest {
     @Test
     fun bookmarkOperations_withManyUsers_performWell() = testScope.runTest {
         // Given - Setup for bookmark operations
-        every { toggleBookmarkUseCase(any()) } returns Result.Success(Unit)
+        coEvery { toggleBookmarkUseCase(any()) } returns Result.Success(Unit)
+
+        // ✅ CRITICAL: Mock the getUsersPagedUseCase that ViewModel needs
+        val testUsers = generateLargeUserList(100)
+        every { getUsersPagedUseCase() } returns flowOf(PagingData.from(testUsers))
 
         val viewModel = UserListViewModel(
             getUsersPagedUseCase = getUsersPagedUseCase,
@@ -167,7 +171,8 @@ class PerformanceTest {
             networkProvider = networkProvider
         )
 
-        val testUsers = generateLargeUserList(100)
+        // Allow ViewModel to initialize
+        advanceUntilIdle()
 
         // When - Perform multiple bookmark operations
         val bookmarkTime = measureTimeMillis {
