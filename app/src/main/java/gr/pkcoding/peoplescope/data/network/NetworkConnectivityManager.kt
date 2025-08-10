@@ -17,7 +17,7 @@ interface NetworkConnectivityProvider {
 }
 
 class NetworkConnectivityManager(
-    private val context: Context // ✅ ΜΟΝΟ εδώ χρειάζεται Context
+    private val context: Context
 ) : NetworkConnectivityProvider {
 
     private val connectivityManager = context.getSystemService<ConnectivityManager>()
@@ -29,7 +29,7 @@ class NetworkConnectivityManager(
             capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
         } catch (e: Exception) {
             Timber.w(e, "Error checking network connectivity")
-            false // Assume no network on error για safety
+            false // Assume no network on error for safety
         }
     }
 
@@ -49,7 +49,6 @@ class NetworkConnectivityManager(
 
         connectivityManager?.registerDefaultNetworkCallback(callback)
 
-        // Send current state
         trySend(isNetworkAvailable())
 
         awaitClose {

@@ -19,8 +19,8 @@ fun GradientBackground(
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFFB2DFDB), // Light teal
-                        Color(0xFFE0F2F1)  // Almost white with green tint
+                        Color(0xFFB2DFDB),
+                        Color(0xFFE0F2F1)
                     )
                 )
             )

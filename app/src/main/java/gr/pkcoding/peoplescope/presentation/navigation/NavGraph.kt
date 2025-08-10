@@ -37,7 +37,7 @@ fun PeopleScopeNavGraph(
             val state by viewModel.state.collectAsStateWithLifecycle()
             val context = LocalContext.current
 
-            // Debounce state για toast messages
+            // Debounce state for toast messages
             var lastToastTime by remember { mutableLongStateOf(0L) }
 
             viewModel.effect.CollectAsEffect { effect ->

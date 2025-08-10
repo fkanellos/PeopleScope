@@ -1,7 +1,16 @@
 package gr.pkcoding.peoplescope.presentation.ui.userdetail
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,7 +21,17 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -32,11 +51,18 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import gr.pkcoding.peoplescope.R
-import gr.pkcoding.peoplescope.domain.model.*
+import gr.pkcoding.peoplescope.domain.model.Coordinates
+import gr.pkcoding.peoplescope.domain.model.DateOfBirth
+import gr.pkcoding.peoplescope.domain.model.Location
+import gr.pkcoding.peoplescope.domain.model.Name
+import gr.pkcoding.peoplescope.domain.model.Picture
+import gr.pkcoding.peoplescope.domain.model.Street
+import gr.pkcoding.peoplescope.domain.model.Timezone
+import gr.pkcoding.peoplescope.domain.model.User
 import gr.pkcoding.peoplescope.presentation.ui.components.BookmarkButton
-import gr.pkcoding.peoplescope.presentation.ui.components.error_views.ErrorView
 import gr.pkcoding.peoplescope.presentation.ui.components.GradientBackground
 import gr.pkcoding.peoplescope.presentation.ui.components.LoadingView
+import gr.pkcoding.peoplescope.presentation.ui.components.error_views.ErrorView
 import gr.pkcoding.peoplescope.ui.theme.PeopleScopeTheme
 import gr.pkcoding.peoplescope.utils.formatDate
 import gr.pkcoding.peoplescope.utils.showToast
@@ -55,7 +81,6 @@ fun UserDetailScreen(
     val currentUser = state.user
     val currentError = state.error
 
-    // ✅ Memoized copyEmail
     val onCopyEmail = remember(currentUser?.email) {
         {
             currentUser?.email?.takeIf { it.isNotBlank() }?.let { email ->
@@ -65,8 +90,6 @@ fun UserDetailScreen(
             } ?: context.showToast("No email available")
         }
     }
-
-    // ✅ Memoized copyPhone
     val onCopyPhone = remember(currentUser?.phone, currentUser?.cell) {
         {
             val phoneNumbers = listOfNotNull(
@@ -95,7 +118,6 @@ fun UserDetailScreen(
             } ?: Unit
         }
     }
-
 
     Scaffold(
         topBar = {
@@ -167,7 +189,7 @@ private fun UserDetailContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ✅ Contact Information με copy buttons
+        // Contact Information & copy buttons
         ContactInfoCard(
             user = user,
             onCopyEmail = onCopyEmail,
@@ -176,12 +198,10 @@ private fun UserDetailContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Location Information
         LocationInfoCard(user = user)
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Additional Information
         AdditionalInfoCard(user = user)
     }
 }
@@ -209,7 +229,6 @@ private fun ContactInfoCard(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            // ✅ Email με copy button
             user.email?.takeIf { it.isNotBlank() }?.let { email ->
                 ContactInfoRow(
                     icon = Icons.Default.Email,
@@ -219,7 +238,6 @@ private fun ContactInfoCard(
                 )
             }
 
-            // ✅ Phone numbers με copy button
             val phoneNumbers = listOfNotNull(
                 user.phone?.takeIf { it.isNotBlank() },
                 user.cell?.takeIf { it.isNotBlank() }
@@ -250,7 +268,6 @@ private fun ContactInfoRow(
             .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Icon
         Box(
             modifier = Modifier
                 .size(40.dp)
@@ -286,7 +303,6 @@ private fun ContactInfoRow(
             )
         }
 
-        // ✅ Copy button με available Material Icon
         IconButton(
             onClick = onCopy,
             modifier = Modifier

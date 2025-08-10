@@ -10,18 +10,46 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.*
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -38,11 +66,11 @@ import androidx.paging.compose.itemKey
 import gr.pkcoding.peoplescope.R
 import gr.pkcoding.peoplescope.data.mapper.isNetworkRelatedError
 import gr.pkcoding.peoplescope.domain.model.User
-import gr.pkcoding.peoplescope.presentation.ui.components.error_views.ErrorView
 import gr.pkcoding.peoplescope.presentation.ui.components.GradientBackground
 import gr.pkcoding.peoplescope.presentation.ui.components.LoadingView
 import gr.pkcoding.peoplescope.presentation.ui.components.SearchBar
 import gr.pkcoding.peoplescope.presentation.ui.components.UserCard
+import gr.pkcoding.peoplescope.presentation.ui.components.error_views.ErrorView
 import gr.pkcoding.peoplescope.presentation.ui.components.error_views.NetworkStatusBar
 import gr.pkcoding.peoplescope.presentation.ui.components.error_views.NoInternetErrorView
 import kotlinx.coroutines.launch
@@ -199,10 +227,14 @@ private fun UserListContent(
     val onScrollToTop: () -> Unit = remember(listState, coroutineScope) {
         {
             coroutineScope.launch {
+                if (listState.firstVisibleItemIndex > 50) {
+                    listState.scrollToItem(50)
+                }
                 listState.animateScrollToItem(0)
             }
         }
     }
+
 
     Box(modifier = Modifier.fillMaxSize()) {
         when {
@@ -271,7 +303,6 @@ private fun UserListContent(
 
                         is LoadState.Error -> {
                             item {
-                                // ✅ FIXED: Χρησιμοποιούμε το υπάρχον ErrorView
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()

@@ -13,12 +13,14 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import gr.pkcoding.peoplescope.domain.model.Error
+import gr.pkcoding.peoplescope.domain.model.Result
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.debounce
 import timber.log.Timber
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Locale
 
 /**
  * Extension function to collect Flow safely in Composables
@@ -45,7 +47,7 @@ fun String.formatDate(): String {
         val outputFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
         val date = inputFormat.parse(this)
         date?.let { outputFormat.format(it) } ?: this
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         this
     }
 }
@@ -86,5 +88,16 @@ fun Activity.enableImmersiveMode() {
                         or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                         or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
         }
+    }
+}
+
+// Extension function for Result
+inline fun <T, E : Error> Result<T, E>.fold(
+    onSuccess: (T) -> Unit,
+    onError: (E) -> Unit
+) {
+    when (this) {
+        is Result.Success -> onSuccess(data)
+        is Result.Error -> onError(error)
     }
 }

@@ -5,11 +5,18 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
 import gr.pkcoding.peoplescope.data.local.dao.BookmarkDao
-import gr.pkcoding.peoplescope.data.mapper.*
+import gr.pkcoding.peoplescope.data.mapper.toBookmarkedEntity
+import gr.pkcoding.peoplescope.data.mapper.toDomainModel
+import gr.pkcoding.peoplescope.data.mapper.toLocalError
+import gr.pkcoding.peoplescope.data.mapper.toNetworkError
 import gr.pkcoding.peoplescope.data.network.NetworkConnectivityProvider
 import gr.pkcoding.peoplescope.data.paging.UserPagingSource
 import gr.pkcoding.peoplescope.data.remote.api.RandomUserApi
-import gr.pkcoding.peoplescope.domain.model.*
+import gr.pkcoding.peoplescope.domain.model.DataError
+import gr.pkcoding.peoplescope.domain.model.LocalError
+import gr.pkcoding.peoplescope.domain.model.Result
+import gr.pkcoding.peoplescope.domain.model.User
+import gr.pkcoding.peoplescope.domain.model.UserError
 import gr.pkcoding.peoplescope.domain.repository.UserRepository
 import gr.pkcoding.peoplescope.utils.Constants
 import kotlinx.coroutines.Dispatchers
@@ -256,8 +263,8 @@ class UserRepositoryImpl(
             config = PagingConfig(
                 pageSize = Constants.PAGE_SIZE,
                 enablePlaceholders = false,
-                initialLoadSize = Constants.PAGE_SIZE,
-                prefetchDistance = 3,
+                initialLoadSize = Constants.PAGE_SIZE * 2,
+                prefetchDistance = 5,
                 maxSize = Constants.PAGE_SIZE * 20,
                 jumpThreshold = Int.MIN_VALUE
             ),

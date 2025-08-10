@@ -15,7 +15,13 @@ import gr.pkcoding.peoplescope.presentation.base.BaseViewModel
 import gr.pkcoding.peoplescope.presentation.toUiText
 import gr.pkcoding.peoplescope.utils.Constants
 import gr.pkcoding.peoplescope.utils.debounceSearch
-import kotlinx.coroutines.flow.*
+import gr.pkcoding.peoplescope.utils.fold
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -31,12 +37,12 @@ class UserListViewModel(
     private val _searchQuery = MutableStateFlow("")
     private val _bookmarkedUserIds = MutableStateFlow<Set<String>>(emptySet())
 
-    // ✅ ENHANCED - Smart offline mode detection στο UserListViewModel
+    // Smart offline mode detection στο UserListViewModel
 
     init {
         Timber.d("🚀 UserListViewModel initialized")
 
-        // Observe database changes (existing)
+        // Observe database changes
         viewModelScope.launch {
             bookmarkDao.getAllBookmarkedUsers().collect { bookmarkedUsers ->
                 val bookmarkedIds = bookmarkedUsers.map { it.id }.toSet()
@@ -45,7 +51,7 @@ class UserListViewModel(
             }
         }
 
-        // ✅ ENHANCED Network state observing με smart offline detection
+        // Network state observing with smart offline detection
         viewModelScope.launch {
             networkProvider.networkConnectivityFlow().collect { isOnline ->
                 Timber.d("🌐 Network state changed: $isOnline")
@@ -56,9 +62,6 @@ class UserListViewModel(
                 updateState {
                     copy(
                         isOnline = isOnline,
-                        // ✅ SMART LOGIC: Show offline mode μόνο αν:
-                        // 1. Δεν έχουμε internet ΚΑΙ
-                        // 2. Έχουμε bookmarked users να δείξουμε
                         isOfflineMode = !isOnline && hasBookmarkedUsers,
                         showNetworkError = !isOnline && !hasBookmarkedUsers
                     )
@@ -68,12 +71,12 @@ class UserListViewModel(
                 if (isOnline && currentState.showNetworkError) {
                     Timber.d("🔄 Connection restored - clearing network error")
                     updateState { copy(showNetworkError = false) }
-                    // Could trigger refresh here if needed
+                    //todo Could trigger refresh here if needed
                 }
             }
         }
 
-        // Search query handling (existing)
+        // Search query handling
         viewModelScope.launch {
             _searchQuery
                 .debounceSearch(Constants.SEARCH_DEBOUNCE_MS)

@@ -41,8 +41,7 @@ fun Throwable.toLocalError(): LocalError {
 }
 
 /**
- * ✅ NEW - Smart network error detection
- * Κίνησε τη logic από το Composable εδώ!
+ * Smart network error detection
  */
 fun Throwable.isNetworkRelatedError(): Boolean {
     return when (this) {
