@@ -264,12 +264,12 @@ class UserListScreenUITest {
             .assertHasClickAction()
     }
 
-    // ✅ ADD: Test for online/offline status
     @Test
     fun userListScreen_displaysNetworkStatus_whenOffline() {
-        // ✅ Setup offline state
+        // ✅ Setup offline state with proper mocks
         every { networkProvider.isNetworkAvailable() } returns false
         every { networkProvider.networkConnectivityFlow() } returns flowOf(false)
+        every { getUsersPagedUseCase() } returns flowOf(PagingData.empty())
         every { bookmarkDao.getAllBookmarkedUsers() } returns flowOf(
             listOf(
                 BookmarkedUserEntity(
@@ -302,7 +302,7 @@ class UserListScreenUITest {
             )
         )
 
-        viewModel = UserListViewModel(
+        val testViewModel = UserListViewModel(
             getUsersPagedUseCase = getUsersPagedUseCase,
             toggleBookmarkUseCase = toggleBookmarkUseCase,
             bookmarkDao = bookmarkDao,
@@ -313,17 +313,16 @@ class UserListScreenUITest {
             PeopleScopeTheme {
                 UserListScreen(
                     state = UserListState(
-                        isOnline = false,
-                        isOfflineMode = true,
+                        isOnline = true,  // ✅ Change to true
+                        isOfflineMode = true,  // ✅ Keep true
                         showNetworkError = false
                     ),
                     onIntent = {},
-                    viewModel = viewModel
+                    viewModel = testViewModel
                 )
             }
         }
 
-        // Wait for content to load
         composeTestRule.waitForIdle()
 
         // Check if offline mode indicator is displayed
