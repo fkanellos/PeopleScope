@@ -67,13 +67,6 @@ data class Location(
         val parts = listOfNotNull(city, country).filter { it.isNotBlank() }
         return parts.joinToString(", ")
     }
-//todo do we need this?
-    fun getFullAddress(): String {
-        val streetPart = street?.let { "${it.number} ${it.name}".trim() }
-        val parts = listOfNotNull(streetPart, city, state, postcode, country)
-            .filter { it.isNotBlank() }
-        return parts.joinToString(", ")
-    }
 }
 
 data class Street(

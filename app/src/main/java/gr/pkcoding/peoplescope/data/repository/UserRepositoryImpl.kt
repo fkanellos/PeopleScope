@@ -130,23 +130,20 @@ class UserRepositoryImpl(
         }
     }
 
-    // ✅ NEW - Helper function για consistent error handling
     private suspend fun handleNetworkErrorWithFallback(
         networkError: Exception,
         page: Int
     ): Result<List<User>, DataError> {
-        // Fallback to offline data μόνο για first page
+        // Fallback to offline data only for first page
         return if (page == 1) {
             try {
                 Timber.d("🔄 Falling back to offline bookmarked users due to: ${networkError.message}")
                 getOfflineBookmarkedUsers()
             } catch (offlineError: Exception) {
                 Timber.e(offlineError, "Offline fallback also failed")
-                // ✅ FIXED - Χρησιμοποιούμε το original network error με proper mapping
                 Result.Error(DataError.Network(networkError.toNetworkError()))
             }
         } else {
-            // Για subsequent pages, επιστρέφουμε το network error απευθείας
             Result.Error(DataError.Network(networkError.toNetworkError()))
         }
     }

@@ -1,3 +1,5 @@
+// File: app/src/main/java/gr/pkcoding/peoplescope/presentation/ui/userlist/UserListScreen.kt
+
 package gr.pkcoding.peoplescope.presentation.ui.userlist
 
 import androidx.compose.animation.AnimatedVisibility
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,6 +25,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -48,8 +52,10 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -70,9 +76,11 @@ import gr.pkcoding.peoplescope.presentation.ui.components.GradientBackground
 import gr.pkcoding.peoplescope.presentation.ui.components.LoadingView
 import gr.pkcoding.peoplescope.presentation.ui.components.SearchBar
 import gr.pkcoding.peoplescope.presentation.ui.components.UserCard
+import gr.pkcoding.peoplescope.presentation.ui.components.error_views.EnhancedNetworkStatusBar
 import gr.pkcoding.peoplescope.presentation.ui.components.error_views.ErrorView
-import gr.pkcoding.peoplescope.presentation.ui.components.error_views.NetworkStatusBar
+import gr.pkcoding.peoplescope.presentation.ui.components.error_views.NetworkTransitionCard
 import gr.pkcoding.peoplescope.presentation.ui.components.error_views.NoInternetErrorView
+import gr.pkcoding.peoplescope.presentation.ui.components.error_views.SmartNetworkIndicator
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -98,6 +106,14 @@ fun UserListScreen(
         { onIntent(UserListIntent.ClearSearch) }
     }
 
+    val onRetryConnection: () -> Unit = remember(onIntent) {
+        { onIntent(UserListIntent.RetryConnection) }
+    }
+
+    val onRefreshAfterReconnection: () -> Unit = remember(onIntent) {
+        { onIntent(UserListIntent.RefreshAfterReconnection) }
+    }
+
     val lazyPagingItems = remember(viewModel) {
         viewModel.pagedUsersWithUpdates
     }.collectAsLazyPagingItems()
@@ -111,7 +127,6 @@ fun UserListScreen(
             }
         }
     }
-
 
     val appBarHeight by animateDpAsState(
         targetValue = if (showFullTopAppBar) 60.dp else 0.dp,
@@ -139,10 +154,12 @@ fun UserListScreen(
                     .background(MaterialTheme.colorScheme.primary)
                     .zIndex(1f)
             ) {
-                NetworkStatusBar(
-                    isOnline = state.isOnline,
-                    isOfflineMode = state.isOfflineMode
+                EnhancedNetworkStatusBar(
+                    state = state,
+                    onRetryClick = onRetryConnection,
+                    onRefreshClick = onRefreshAfterReconnection
                 )
+
                 Box(
                     Modifier
                         .fillMaxWidth()
@@ -151,11 +168,20 @@ fun UserListScreen(
                 ) {
                     if (appBarHeight > 0.dp) {
                         TopAppBar(
-                            title = { Text(
-                                text = stringResource(topAppBarTitleResId),
-                                modifier = Modifier
-                                    .fillMaxHeight()
-                                    .wrapContentHeight(Alignment.CenterVertically)) },
+                            title = {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .wrapContentHeight(Alignment.CenterVertically),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(text = stringResource(topAppBarTitleResId))
+
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                    SmartNetworkIndicator(state = state)
+                                }
+                            },
                             colors = TopAppBarDefaults.topAppBarColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
                                 titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -189,11 +215,17 @@ fun UserListScreen(
         ) {
             PullToRefreshBox(
                 isRefreshing = lazyPagingItems.loadState.refresh is LoadState.Loading,
-                onRefresh = { lazyPagingItems.refresh() },
+                onRefresh = {
+                    lazyPagingItems.refresh()
+                    if (state.isConnectionJustRestored()) {
+                        onRefreshAfterReconnection()
+                    }
+                },
                 modifier = Modifier.fillMaxSize()
             ) {
                 UserListContent(
                     lazyPagingItems = lazyPagingItems,
+                    state = state,
                     onIntent = onIntent,
                     listState = listState
                 )
@@ -205,10 +237,21 @@ fun UserListScreen(
 @Composable
 private fun UserListContent(
     lazyPagingItems: LazyPagingItems<User>,
+    state: UserListState,
     onIntent: (UserListIntent) -> Unit,
     listState: LazyListState,
 ) {
     val coroutineScope = rememberCoroutineScope()
+
+    var showConnectionRestored by remember { mutableStateOf(false) }
+    var showConnectionLost by remember { mutableStateOf(false) }
+
+    if (state.isConnectionJustRestored() && !showConnectionRestored) {
+        showConnectionRestored = true
+    }
+    if (state.isConnectionJustLost() && !showConnectionLost) {
+        showConnectionLost = true
+    }
 
     val showScrollToTop by remember {
         derivedStateOf {
@@ -235,8 +278,36 @@ private fun UserListContent(
         }
     }
 
-
     Box(modifier = Modifier.fillMaxSize()) {
+
+        NetworkTransitionCard(
+            isVisible = showConnectionRestored,
+            title = stringResource(R.string.connection_restored_title),
+            message = stringResource(R.string.connection_restored_message),
+            actionText = stringResource(R.string.refresh_now),
+            onActionClick = {
+                onIntent(UserListIntent.RefreshAfterReconnection)
+                showConnectionRestored = false
+            },
+            onDismiss = { showConnectionRestored = false }
+        )
+
+        NetworkTransitionCard(
+            isVisible = showConnectionLost,
+            title = stringResource(R.string.connection_lost_title),
+            message = if (state.cachedUsers.isNotEmpty()) {
+                stringResource(R.string.connection_lost_message_with_cache)
+            } else {
+                stringResource(R.string.connection_lost_message_no_cache)
+            },
+            actionText = stringResource(R.string.retry),
+            onActionClick = {
+                onIntent(UserListIntent.RetryConnection)
+                showConnectionLost = false
+            },
+            onDismiss = { showConnectionLost = false }
+        )
+
         when {
             lazyPagingItems.loadState.refresh is LoadState.Loading && lazyPagingItems.itemCount == 0 -> {
                 LoadingView(useShimmer = true)
@@ -245,105 +316,44 @@ private fun UserListContent(
             lazyPagingItems.loadState.refresh is LoadState.Error && lazyPagingItems.itemCount == 0 -> {
                 val error = (lazyPagingItems.loadState.refresh as LoadState.Error).error
 
-                if (error.isNetworkRelatedError()) {
-                    NoInternetErrorView(
-                        onRetry = { lazyPagingItems.retry() }
-                    )
+                if (error.isNetworkRelatedError() && !state.isOnline) {
+                    if (state.shouldShowNetworkError()) {
+                        NoInternetErrorView(
+                            onRetry = {
+                                onIntent(UserListIntent.RetryConnection)
+                                lazyPagingItems.retry()
+                            }
+                        )
+                    } else {
+                        UserListWithError(
+                            lazyPagingItems = lazyPagingItems,
+                            listState = listState,
+                            onToggleBookmark = onToggleBookmark,
+                            onNavigateToDetail = onNavigateToDetail,
+                            errorMessage = stringResource(R.string.no_internet_showing_offline)
+                        )
+                    }
                 } else {
                     ErrorView(
-                        message = error.localizedMessage ?: "An error occurred",
+                        message = error.localizedMessage ?: stringResource(R.string.error_unknown),
                         onRetry = { lazyPagingItems.retry() }
                     )
                 }
             }
 
             else -> {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                    userScrollEnabled = true
-                ) {
-                    items(
-                        count = lazyPagingItems.itemCount,
-                        key = lazyPagingItems.itemKey { user ->
-                            user.id ?: "invalid_${user.hashCode()}"
-                        },
-                        contentType = lazyPagingItems.itemContentType { "user" }
-                    ) { index ->
-                        val user = lazyPagingItems[index]
-
-                        user?.takeIf { it.isValid() }?.let { validUser ->
-                            UserCard(
-                                user = validUser,
-                                onBookmarkClick = { onToggleBookmark(validUser) },
-                                onClick = { onNavigateToDetail(validUser) }
-                            )
-                        }
-                    }
-
-                    when (lazyPagingItems.loadState.append) {
-                        is LoadState.Loading -> {
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(24.dp),
-                                        strokeWidth = 2.dp,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
-
-                        is LoadState.Error -> {
-                            item {
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.errorContainer
-                                    )
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(16.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Text(
-                                            text = "Failed to load more users",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onErrorContainer
-                                        )
-
-                                        Spacer(modifier = Modifier.height(8.dp))
-
-                                        TextButton(
-                                            onClick = { lazyPagingItems.retry() },
-                                            colors = ButtonDefaults.textButtonColors(
-                                                contentColor = MaterialTheme.colorScheme.error
-                                            )
-                                        ) {
-                                            Text("🔄 Retry")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        else -> {}
-                    }
-                }
+                UserListWithContent(
+                    lazyPagingItems = lazyPagingItems,
+                    listState = listState,
+                    onToggleBookmark = onToggleBookmark,
+                    onNavigateToDetail = onNavigateToDetail
+                )
             }
         }
 
+        // Floating action button
         AnimatedVisibility(
-            visible = showScrollToTop,
+            visible = showScrollToTop && lazyPagingItems.itemCount > 0,
             enter = slideInVertically { it } + fadeIn(),
             exit = slideOutVertically { it } + fadeOut(),
             modifier = Modifier.align(Alignment.BottomEnd)
@@ -361,9 +371,133 @@ private fun UserListContent(
             ) {
                 Icon(
                     imageVector = Icons.Default.KeyboardArrowUp,
-                    contentDescription = "Scroll to top"
+                    contentDescription = stringResource(R.string.cd_scroll_to_top)
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun UserListWithContent(
+    lazyPagingItems: LazyPagingItems<User>,
+    listState: LazyListState,
+    onToggleBookmark: (User) -> Unit,
+    onNavigateToDetail: (User) -> Unit
+) {
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        userScrollEnabled = true
+    ) {
+        items(
+            count = lazyPagingItems.itemCount,
+            key = lazyPagingItems.itemKey { user ->
+                user.id ?: "invalid_${user.hashCode()}"
+            },
+            contentType = lazyPagingItems.itemContentType { "user" }
+        ) { index ->
+            val user = lazyPagingItems[index]
+
+            user?.takeIf { it.isValid() }?.let { validUser ->
+                UserCard(
+                    user = validUser,
+                    onBookmarkClick = { onToggleBookmark(validUser) },
+                    onClick = { onNavigateToDetail(validUser) }
+                )
+            }
+        }
+
+        when (lazyPagingItems.loadState.append) {
+            is LoadState.Loading -> {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
+            is LoadState.Error -> {
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = stringResource(R.string.failed_to_load_more_users),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            TextButton(
+                                onClick = { lazyPagingItems.retry() },
+                                colors = ButtonDefaults.textButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                )
+                            ) {
+                                Text(stringResource(R.string.retry_with_icon))
+                            }
+                        }
+                    }
+                }
+            }
+
+            else -> {}
+        }
+    }
+}
+
+@Composable
+private fun UserListWithError(
+    lazyPagingItems: LazyPagingItems<User>,
+    listState: LazyListState,
+    onToggleBookmark: (User) -> Unit,
+    onNavigateToDetail: (User) -> Unit,
+    errorMessage: String
+) {
+    Column {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer
+            )
+        ) {
+            Text(
+                text = errorMessage,
+                modifier = Modifier.padding(16.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        }
+
+        UserListWithContent(
+            lazyPagingItems = lazyPagingItems,
+            listState = listState,
+            onToggleBookmark = onToggleBookmark,
+            onNavigateToDetail = onNavigateToDetail
+        )
     }
 }

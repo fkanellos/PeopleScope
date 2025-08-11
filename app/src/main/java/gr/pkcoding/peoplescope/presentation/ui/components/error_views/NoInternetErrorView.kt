@@ -23,9 +23,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import gr.pkcoding.peoplescope.R
 
 @Composable
 fun NoInternetErrorView(
@@ -59,7 +61,7 @@ fun NoInternetErrorView(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "📵 No Internet Connection",
+                    text = stringResource(R.string.no_internet_connection_title),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.error,
                     fontWeight = FontWeight.Bold
@@ -68,7 +70,7 @@ fun NoInternetErrorView(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "Please check your connection and try again",
+                    text = stringResource(R.string.check_connection_try_again),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onErrorContainer
@@ -88,7 +90,7 @@ fun NoInternetErrorView(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Retry Connection")
+                    Text(stringResource(R.string.retry_connection))
                 }
             }
         }

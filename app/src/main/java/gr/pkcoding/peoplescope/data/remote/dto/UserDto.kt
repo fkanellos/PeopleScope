@@ -48,7 +48,7 @@ data class LocationDto(
     @SerializedName("country")
     val country: String?,
     @SerializedName("postcode")
-    val postcode: Any?, // Can be String or Int
+    val postcode: Any?,
     @SerializedName("coordinates")
     val coordinates: CoordinatesDto?,
     @SerializedName("timezone")

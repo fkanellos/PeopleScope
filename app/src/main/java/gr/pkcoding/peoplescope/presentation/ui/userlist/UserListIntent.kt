@@ -8,4 +8,6 @@ sealed class UserListIntent : ViewIntent {
     data class NavigateToDetail(val user: User) : UserListIntent()
     data class UpdateSearchQuery(val query: String) : UserListIntent()
     object ClearSearch : UserListIntent()
+    object RetryConnection : UserListIntent()
+    object RefreshAfterReconnection : UserListIntent()
 }

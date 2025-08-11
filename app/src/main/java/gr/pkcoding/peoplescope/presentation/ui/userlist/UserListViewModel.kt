@@ -36,13 +36,17 @@ class UserListViewModel(
 
     private val _searchQuery = MutableStateFlow("")
     private val _bookmarkedUserIds = MutableStateFlow<Set<String>>(emptySet())
-
-    // Smart offline mode detection στο UserListViewModel
+    private val _currentUserCache = MutableStateFlow<List<User>>(emptyList())
 
     init {
         Timber.d("🚀 UserListViewModel initialized")
 
-        // Observe database changes
+        observeBookmarkChanges()
+        observeNetworkChanges()
+        observeSearchChanges()
+    }
+
+    private fun observeBookmarkChanges() {
         viewModelScope.launch {
             bookmarkDao.getAllBookmarkedUsers().collect { bookmarkedUsers ->
                 val bookmarkedIds = bookmarkedUsers.map { it.id }.toSet()
@@ -50,33 +54,20 @@ class UserListViewModel(
                 _bookmarkedUserIds.value = bookmarkedIds
             }
         }
+    }
 
-        // Network state observing with smart offline detection
+    private fun observeNetworkChanges() {
         viewModelScope.launch {
-            networkProvider.networkConnectivityFlow().collect { isOnline ->
-                Timber.d("🌐 Network state changed: $isOnline")
-
-                val currentState = state.value
-                val hasBookmarkedUsers = _bookmarkedUserIds.value.isNotEmpty()
-
-                updateState {
-                    copy(
-                        isOnline = isOnline,
-                        isOfflineMode = !isOnline && hasBookmarkedUsers,
-                        showNetworkError = !isOnline && !hasBookmarkedUsers
-                    )
+            networkProvider.networkConnectivityFlow()
+                .distinctUntilChanged() // Prevent rapid toggles
+                .collect { isOnline ->
+                    Timber.d("🌐 Network state changed: $isOnline")
+                    handleNetworkStateChange(isOnline)
                 }
-
-                // Auto-retry when connection restored
-                if (isOnline && currentState.showNetworkError) {
-                    Timber.d("🔄 Connection restored - clearing network error")
-                    updateState { copy(showNetworkError = false) }
-                    //todo Could trigger refresh here if needed
-                }
-            }
         }
+    }
 
-        // Search query handling
+    private fun observeSearchChanges() {
         viewModelScope.launch {
             _searchQuery
                 .debounceSearch(Constants.SEARCH_DEBOUNCE_MS)
@@ -85,6 +76,67 @@ class UserListViewModel(
                     Timber.d("🔍 Debounced search query: '$debouncedQuery'")
                     updateState { copy(searchQuery = debouncedQuery) }
                 }
+        }
+    }
+
+    private suspend fun handleNetworkStateChange(isOnline: Boolean) {
+        val currentState = state.value
+        val hasBookmarkedUsers = _bookmarkedUserIds.value.isNotEmpty()
+        val hasContent = currentState.cachedUsers.isNotEmpty()
+
+        // ✅ IMPROVED: Gradual state change with UX considerations
+        updateState {
+            copy(
+                isOnline = isOnline,
+                lastOnlineState = this.isOnline, // Track previous state
+                connectionChangeTimestamp = System.currentTimeMillis(),
+
+                // Smart offline mode detection
+                isOfflineMode = !isOnline && (hasBookmarkedUsers || hasContent),
+                showNetworkError = !isOnline && !hasBookmarkedUsers && !hasContent
+            )
+        }
+
+        // ✅ FIXED: Use the helper methods from state
+        val newState = state.value
+        when {
+            // Connection was just restored - USE HELPER METHOD
+            newState.isConnectionJustRestored() -> {
+                Timber.d("🔄 Connection restored")
+                sendEffect(UserListEffect.ConnectionRestored)
+
+                // If we were showing error, auto-clear it
+                if (currentState.showNetworkError) {
+                    sendEffect(UserListEffect.ShowRefreshOption(
+                        UiText.DynamicString("Connection restored! Pull to refresh for latest data.")
+                    ))
+                }
+            }
+
+            // Connection was just lost - USE HELPER METHOD
+            newState.isConnectionJustLost() -> {
+                Timber.d("📵 Connection lost")
+                sendEffect(UserListEffect.ConnectionLost)
+
+                // Show appropriate message based on available content
+                when {
+                    hasBookmarkedUsers -> {
+                        sendEffect(UserListEffect.ShowRefreshOption(
+                            UiText.DynamicString("No internet. Showing your bookmarked users.")
+                        ))
+                    }
+                    hasContent -> {
+                        sendEffect(UserListEffect.ShowRefreshOption(
+                            UiText.DynamicString("No internet. Showing cached content.")
+                        ))
+                    }
+                    else -> {
+                        sendEffect(UserListEffect.ShowError(
+                            UiText.DynamicString("No internet connection and no cached content available.")
+                        ))
+                    }
+                }
+            }
         }
     }
 
@@ -103,7 +155,12 @@ class UserListViewModel(
             .map { user ->
                 // Update bookmark status
                 val isBookmarked = user.id?.let { it in bookmarkedIds } ?: false
-                user.copy(isBookmarked = isBookmarked)
+                val updatedUser = user.copy(isBookmarked = isBookmarked)
+
+                // ✅ FIXED: Cache users as we process them
+                updateCachedUsers(updatedUser)
+
+                updatedUser
             }
             .filter { user ->
                 // Only show valid users
@@ -127,6 +184,31 @@ class UserListViewModel(
             }
     }.cachedIn(viewModelScope)
 
+    private fun updateCachedUsers(user: User) {
+        _currentUserCache.update { currentCache ->
+            val updatedCache = currentCache.toMutableList()
+            val existingIndex = updatedCache.indexOfFirst { it.id == user.id }
+
+            if (existingIndex >= 0) {
+                updatedCache[existingIndex] = user
+            } else {
+                updatedCache.add(user)
+            }
+
+            // Keep cache size reasonable
+            if (updatedCache.size > 200) {
+                updatedCache.take(200)
+            } else {
+                updatedCache
+            }
+        }
+
+        // Update state with cached users
+        updateState {
+            copy(cachedUsers = _currentUserCache.value)
+        }
+    }
+
     override suspend fun handleIntent(intent: UserListIntent) {
         Timber.d("🎯 Handling intent: ${intent::class.simpleName}")
 
@@ -135,17 +217,42 @@ class UserListViewModel(
             is UserListIntent.NavigateToDetail -> navigateToDetail(intent.user)
             is UserListIntent.UpdateSearchQuery -> updateSearchQuery(intent.query)
             is UserListIntent.ClearSearch -> clearSearch()
+            // ✅ NEW: Handle network-related intents
+            is UserListIntent.RetryConnection -> handleRetryConnection()
+            is UserListIntent.RefreshAfterReconnection -> handleRefreshAfterReconnection()
         }
     }
 
     private fun updateSearchQuery(query: String) {
         Timber.d("🔍 Updating search query to: '$query'")
+        _searchQuery.value = query
         updateState { copy(searchQuery = query) }
     }
 
     private fun clearSearch() {
         Timber.d("🧹 Clearing search query")
+        _searchQuery.value = ""
         updateState { copy(searchQuery = "") }
+    }
+
+    private fun handleRetryConnection() {
+        if (networkProvider.isNetworkAvailable()) {
+            sendEffect(UserListEffect.ShowRefreshOption(
+                UiText.DynamicString("Connection available! Pull to refresh.")
+            ))
+        } else {
+            sendEffect(UserListEffect.ShowError(
+                UiText.DynamicString("Still no internet connection.")
+            ))
+        }
+    }
+
+    private fun handleRefreshAfterReconnection() {
+        // This could trigger a refresh of the paging source
+        // For now, we'll just show a confirmation
+        sendEffect(UserListEffect.ShowRefreshOption(
+            UiText.DynamicString("Refreshing with latest data...")
+        ))
     }
 
     private fun toggleBookmark(user: User) {

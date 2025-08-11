@@ -93,6 +93,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.material.icons.extended)
 
     // Koin for dependency injection
     implementation(libs.koin.android)
@@ -141,7 +142,7 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.rules)
     // Testing - Navigation
-    androidTestImplementation("androidx.navigation:navigation-testing:${libs.versions.navigationCompose.get()}")
+    androidTestImplementation(libs.androidx.navigation.testing)
 
     // Debug
     debugImplementation(libs.androidx.compose.ui.tooling)

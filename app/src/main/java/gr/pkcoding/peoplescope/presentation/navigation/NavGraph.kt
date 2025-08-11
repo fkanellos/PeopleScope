@@ -11,6 +11,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import gr.pkcoding.peoplescope.R
 import gr.pkcoding.peoplescope.presentation.ui.userdetail.UserDetailEffect
 import gr.pkcoding.peoplescope.presentation.ui.userdetail.UserDetailScreen
 import gr.pkcoding.peoplescope.presentation.ui.userdetail.UserDetailViewModel
@@ -51,26 +52,43 @@ fun PeopleScopeNavGraph(
                             )
                         } else {
                             Timber.w("❌ Cannot navigate: user ID is null")
-                            context.showToast("Cannot view details for this user")
+                            context.showToast(context.getString(R.string.cannot_view_user_details))
                         }
                     }
+
                     is UserListEffect.ShowError -> {
                         Timber.e("❌ Showing error: ${effect.message}")
                         context.showToast(effect.message.asString(context))
                     }
+
                     is UserListEffect.ShowBookmarkToggled -> {
                         // Debounce toast messages (500ms)
                         val currentTime = System.currentTimeMillis()
                         if (currentTime - lastToastTime > 500) {
                             val message = if (effect.isBookmarked) {
-                                "User bookmarked ⭐"
+                                context.getString(R.string.user_bookmarked)
                             } else {
-                                "Bookmark removed"
+                                context.getString(R.string.bookmark_removed)
                             }
                             Timber.d("📱 Showing bookmark toast: $message")
                             context.showToast(message)
                             lastToastTime = currentTime
                         }
+                    }
+
+                    is UserListEffect.ConnectionRestored -> {
+                        Timber.d("🔄 Connection restored effect")
+                        context.showToast(context.getString(R.string.connection_restored_toast))
+                    }
+
+                    is UserListEffect.ConnectionLost -> {
+                        Timber.d("📵 Connection lost effect")
+                        context.showToast(context.getString(R.string.connection_lost_offline_content))
+                    }
+
+                    is UserListEffect.ShowRefreshOption -> {
+                        Timber.d("🔄 Showing refresh option: ${effect.message}")
+                        context.showToast(effect.message.asString(context))
                     }
                 }
             }
@@ -100,9 +118,9 @@ fun PeopleScopeNavGraph(
                     }
                     is UserDetailEffect.ShowBookmarkToggled -> {
                         val message = if (effect.isBookmarked) {
-                            "User bookmarked successfully"
+                            context.getString(R.string.user_bookmarked_successfully)
                         } else {
-                            "Bookmark removed"
+                            context.getString(R.string.bookmark_removed)
                         }
                         context.showToast(message)
                     }

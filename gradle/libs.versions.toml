@@ -14,12 +14,14 @@ composeBom = "2024.12.01"
 composeCompiler = "1.5.8"
 
 # Navigation
+materialIconsExtended = "<compose_version>"
 navigationCompose = "2.8.5"
 
 # DI
 koin = "3.5.3"
 
 # Networking
+navigationTesting = "2.8.5"
 retrofit = "2.9.0"
 okhttp = "4.12.0"
 
@@ -64,6 +66,7 @@ androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-te
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 
 # Navigation
+androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 
 # ViewModel Compose
@@ -71,6 +74,7 @@ androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycleRuntimeKtx" }
 
 # Koin
+androidx-navigation-testing = { module = "androidx.navigation:navigation-testing", version.ref = "navigationTesting" }
 koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
 koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = "koin" }
 

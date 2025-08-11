@@ -25,4 +25,44 @@
     <string name="cd_user_avatar">User avatar</string>
     <string name="cd_bookmark_icon">Bookmark icon</string>
     <string name="cd_back_button">Navigate back</string>
+    <string name="cd_scroll_to_top">Scroll to top</string>
+
+    <!-- Network status messages -->
+    <string name="connection_restored_title">🔄 Connection Restored!</string>
+    <string name="connection_restored_message">Internet connection is back. Pull to refresh to get the latest data.</string>
+    <string name="connection_lost_title">Connection Lost</string>
+    <string name="connection_lost_message_with_cache">No internet connection. Showing your saved content.</string>
+    <string name="connection_lost_message_no_cache">No internet connection. Please check your network settings.</string>
+    <string name="refresh_now">Refresh Now</string>
+    <string name="refresh">Refresh</string>
+    <string name="dismiss">Dismiss</string>
+
+    <!-- Offline mode -->
+    <string name="offline_mode">Offline Mode</string>
+    <string name="showing_bookmarked_users">Showing bookmarked users</string>
+    <string name="showing_cached_content">Showing cached content</string>
+    <string name="no_internet_showing_offline">No internet - showing offline content</string>
+
+    <!-- Network status indicators -->
+    <string name="no_internet_short">No Internet</string>
+    <string name="check_connection">Check your connection</string>
+    <string name="connected">Connected</string>
+    <string name="pull_to_refresh_latest">Pull to refresh for latest data</string>
+    <string name="no_data">No Data</string>
+    <string name="offline">Offline</string>
+    <string name="no_internet_connection_title">📵 No Internet Connection</string>
+    <string name="check_connection_try_again">Please check your connection and try again</string>
+    <string name="retry_connection">Retry Connection</string>
+
+    <!-- Loading states -->
+    <string name="failed_to_load_more_users">Failed to load more users</string>
+    <string name="retry_with_icon">🔄 Retry</string>
+
+    <!-- Navigation messages -->
+    <string name="cannot_view_user_details">Cannot view details for this user</string>
+    <string name="user_bookmarked">User bookmarked ⭐</string>
+    <string name="bookmark_removed">Bookmark removed</string>
+    <string name="connection_restored_toast">📶 Internet connection restored!</string>
+    <string name="connection_lost_offline_content">📵 Connection lost - showing offline content</string>
+    <string name="user_bookmarked_successfully">User bookmarked successfully</string>
 </resources>

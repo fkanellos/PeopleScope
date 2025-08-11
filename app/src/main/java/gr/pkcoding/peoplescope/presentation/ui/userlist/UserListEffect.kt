@@ -8,4 +8,7 @@ sealed class UserListEffect : ViewEffect {
     data class NavigateToUserDetail(val user: User) : UserListEffect()
     data class ShowError(val message: UiText) : UserListEffect()
     data class ShowBookmarkToggled(val isBookmarked: Boolean) : UserListEffect()
+    object ConnectionRestored : UserListEffect()
+    object ConnectionLost : UserListEffect()
+    data class ShowRefreshOption(val message: UiText) : UserListEffect()
 }
