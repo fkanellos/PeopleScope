@@ -52,10 +52,8 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -241,16 +239,6 @@ private fun UserListContent(
     listState: LazyListState,
 ) {
     val coroutineScope = rememberCoroutineScope()
-
-    var showConnectionRestored by remember { mutableStateOf(false) }
-    var showConnectionLost by remember { mutableStateOf(false) }
-
-    if (state.isConnectionJustRestored() && !showConnectionRestored) {
-        showConnectionRestored = true
-    }
-    if (state.isConnectionJustLost() && !showConnectionLost) {
-        showConnectionLost = true
-    }
 
     val showScrollToTop by remember {
         derivedStateOf {

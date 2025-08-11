@@ -84,13 +84,13 @@ class UserListViewModelTest {
         getUsersPagedUseCase = mockk()
         toggleBookmarkUseCase = mockk()
         bookmarkDao = mockk()
-        networkProvider = mockk() // ✅ ADD: Mock the network provider
+        networkProvider = mockk()
 
-        // ✅ CRITICAL: Mock network provider flows
+        // Mock network provider flows
         every { networkProvider.isNetworkAvailable() } returns true
         every { networkProvider.networkConnectivityFlow() } returns flowOf(true)
 
-        // CRITICAL: Mock the Flow that ViewModel observes in init block
+        // Mock the Flow that ViewModel observes in init block
         every { bookmarkDao.getAllBookmarkedUsers() } returns flowOf(emptyList<BookmarkedUserEntity>())
         every { getUsersPagedUseCase() } returns flowOf(PagingData.from(listOf(testUser)))
 
@@ -99,7 +99,7 @@ class UserListViewModelTest {
             getUsersPagedUseCase = getUsersPagedUseCase,
             toggleBookmarkUseCase = toggleBookmarkUseCase,
             bookmarkDao = bookmarkDao,
-            networkProvider = networkProvider // ✅ ADD: Pass network provider
+            networkProvider = networkProvider
         )
     }
 
@@ -116,7 +116,7 @@ class UserListViewModelTest {
         val initialState = viewModel.state.first()
         assertEquals("", initialState.searchQuery)
         assertEquals(false, initialState.isRefreshing)
-        assertEquals(true, initialState.isOnline) // ✅ ADD: Check network state
+        assertEquals(true, initialState.isOnline)
     }
 
     @Test
@@ -179,7 +179,7 @@ class UserListViewModelTest {
         viewModel.processIntent(UserListIntent.NavigateToDetail(testUser))
         advanceUntilIdle()
 
-        // In a real test, you'd verify the effect was emitted using Turbine
+        // In a real test, we'd verify the effect was emitted using Turbine
         // For now, we just verify no exceptions were thrown
     }
 
@@ -198,7 +198,7 @@ class UserListViewModelTest {
             getUsersPagedUseCase = getUsersPagedUseCase,
             toggleBookmarkUseCase = toggleBookmarkUseCase,
             bookmarkDao = bookmarkDao,
-            networkProvider = networkProvider // ✅ ADD: Don't forget network provider
+            networkProvider = networkProvider
         )
 
         advanceUntilIdle()
@@ -209,7 +209,6 @@ class UserListViewModelTest {
         assertEquals("John", state.searchQuery)
     }
 
-    // ✅ ADD: New test for network state handling
     @Test
     fun `network state changes should update ViewModel state`() = testScope.runTest {
         // Given - Start with online state
@@ -233,7 +232,6 @@ class UserListViewModelTest {
         }
     }
 
-    // ✅ ADD: Test offline mode with bookmarks
     @Test
     fun `offline mode should be enabled when no internet but has bookmarks`() = testScope.runTest {
         // Given - Offline with bookmarks
@@ -472,7 +470,6 @@ class UserListViewModelTest {
                 state = awaitItem()
             }
 
-            // ✅ ΑΛΛΑΓΗ: Χρήση μόνο των πραγματικών properties
             assertFalse("Should be offline", state.isOnline)
             assertTrue("Should show offline mode", state.isOfflineMode)
             assertFalse("Should not show network error", state.showNetworkError)

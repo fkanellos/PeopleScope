@@ -4,7 +4,15 @@ import androidx.paging.PagingData
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import gr.pkcoding.peoplescope.data.local.dao.BookmarkDao
 import gr.pkcoding.peoplescope.data.network.NetworkConnectivityProvider
-import gr.pkcoding.peoplescope.domain.model.*
+import gr.pkcoding.peoplescope.domain.model.Coordinates
+import gr.pkcoding.peoplescope.domain.model.DateOfBirth
+import gr.pkcoding.peoplescope.domain.model.Location
+import gr.pkcoding.peoplescope.domain.model.Name
+import gr.pkcoding.peoplescope.domain.model.Picture
+import gr.pkcoding.peoplescope.domain.model.Result
+import gr.pkcoding.peoplescope.domain.model.Street
+import gr.pkcoding.peoplescope.domain.model.Timezone
+import gr.pkcoding.peoplescope.domain.model.User
 import gr.pkcoding.peoplescope.domain.usecase.GetUsersPagedUseCase
 import gr.pkcoding.peoplescope.domain.usecase.ToggleBookmarkUseCase
 import gr.pkcoding.peoplescope.presentation.ui.userlist.UserListViewModel
@@ -14,9 +22,15 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.*
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -87,7 +101,7 @@ class PerformanceTest {
 
         // When - Initialize ViewModel and measure time
         val initTime = measureTimeMillis {
-            val viewModel = UserListViewModel(
+            UserListViewModel(
                 getUsersPagedUseCase = getUsersPagedUseCase,
                 toggleBookmarkUseCase = toggleBookmarkUseCase,
                 bookmarkDao = bookmarkDao,
@@ -160,7 +174,7 @@ class PerformanceTest {
         // Given - Setup for bookmark operations
         coEvery { toggleBookmarkUseCase(any()) } returns Result.Success(Unit)
 
-        // ✅ CRITICAL: Mock the getUsersPagedUseCase that ViewModel needs
+        // Mock the getUsersPagedUseCase that ViewModel needs
         val testUsers = generateLargeUserList(100)
         every { getUsersPagedUseCase() } returns flowOf(PagingData.from(testUsers))
 
@@ -233,7 +247,7 @@ class PerformanceTest {
         // Given - Very large dataset split into pages
         val totalUsers = 10000
         val pageSize = 25
-        val pages = totalUsers / pageSize
+        // ✅ Σβήνω το: val pages = totalUsers / pageSize
 
         // Simulate paging behavior
         val pagingTime = measureTimeMillis {

@@ -46,23 +46,23 @@ fun PeopleScopeNavGraph(
                     is UserListEffect.NavigateToUserDetail -> {
                         val userId = effect.user.id
                         if (!userId.isNullOrBlank()) {
-                            Timber.d("🚀 Navigating to user detail: $userId")
+                            Timber.d("Navigating to user detail: $userId")
                             navController.navigate(
                                 Destinations.UserDetail.createRoute(userId)
                             )
                         } else {
-                            Timber.w("❌ Cannot navigate: user ID is null")
+                            Timber.w("Cannot navigate: user ID is null")
                             context.showToast(context.getString(R.string.cannot_view_user_details))
                         }
                     }
 
                     is UserListEffect.ShowError -> {
-                        Timber.e("❌ Showing error: ${effect.message}")
+                        Timber.e("Showing error: ${effect.message}")
                         context.showToast(effect.message.asString(context))
                     }
 
                     is UserListEffect.ShowBookmarkToggled -> {
-                        // Debounce toast messages (500ms)
+                        // Debounce toast messages
                         val currentTime = System.currentTimeMillis()
                         if (currentTime - lastToastTime > 500) {
                             val message = if (effect.isBookmarked) {
@@ -70,24 +70,24 @@ fun PeopleScopeNavGraph(
                             } else {
                                 context.getString(R.string.bookmark_removed)
                             }
-                            Timber.d("📱 Showing bookmark toast: $message")
+                            Timber.d("Showing bookmark toast: $message")
                             context.showToast(message)
                             lastToastTime = currentTime
                         }
                     }
 
                     is UserListEffect.ConnectionRestored -> {
-                        Timber.d("🔄 Connection restored effect")
+                        Timber.d("Connection restored effect")
                         context.showToast(context.getString(R.string.connection_restored_toast))
                     }
 
                     is UserListEffect.ConnectionLost -> {
-                        Timber.d("📵 Connection lost effect")
+                        Timber.d("Connection lost effect")
                         context.showToast(context.getString(R.string.connection_lost_offline_content))
                     }
 
                     is UserListEffect.ShowRefreshOption -> {
-                        Timber.d("🔄 Showing refresh option: ${effect.message}")
+                        Timber.d("Showing refresh option: ${effect.message}")
                         context.showToast(effect.message.asString(context))
                     }
                 }

@@ -136,7 +136,7 @@ class UserDetailScreenUITest {
 
     @Test
     fun userDetailScreen_bookmarkButton_changesState() {
-        // ✅ Use mutableStateOf to handle state changes within single setContent
+        // Use mutableStateOf to handle state changes within single setContent
         composeTestRule.setContent {
             var isBookmarked by remember { mutableStateOf(false) }
 
@@ -355,7 +355,7 @@ class UserDetailScreenUITest {
             }
         }
 
-        // ✅ Use onAllNodesWithText to handle multiple Location nodes
+        // Use onAllNodesWithText to handle multiple Location nodes
         composeTestRule
             .onAllNodesWithText("Location")
             .onFirst() // Take the first one (section header)
@@ -384,7 +384,7 @@ class UserDetailScreenUITest {
             }
         }
 
-        // ✅ More aggressive scrolling
+        // More aggressive scrolling
         composeTestRule
             .onRoot()
             .performTouchInput {
@@ -430,7 +430,7 @@ class UserDetailScreenUITest {
 
         composeTestRule.waitForIdle()
 
-        // ✅ Check for various possible date formats
+        // Check for various possible date formats
         val possibleDateFormats = listOf(
             "May 15, 1992",
             "1992-05-15",
@@ -484,7 +484,7 @@ class UserDetailScreenUITest {
 
         composeTestRule.waitForIdle()
 
-        // ✅ Check for various possible timezone formats
+        // Check for various possible timezone formats
         val possibleTimezoneFormats = listOf(
             "Pacific Time (-8:00)",
             "Pacific Time",
@@ -552,7 +552,7 @@ class UserDetailScreenUITest {
             .assertIsDisplayed()
     }
 
-    // ✅ Additional tests for better coverage
+    // Additional tests for better coverage
     @Test
     fun userDetailScreen_displaysGenderIndicator() {
         composeTestRule.setContent {

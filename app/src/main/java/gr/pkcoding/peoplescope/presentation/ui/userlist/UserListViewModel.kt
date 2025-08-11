@@ -5,6 +5,7 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.filter
 import androidx.paging.map
+import gr.pkcoding.peoplescope.R
 import gr.pkcoding.peoplescope.data.local.dao.BookmarkDao
 import gr.pkcoding.peoplescope.data.network.NetworkConnectivityProvider
 import gr.pkcoding.peoplescope.domain.model.User
@@ -39,7 +40,7 @@ class UserListViewModel(
     private val _currentUserCache = MutableStateFlow<List<User>>(emptyList())
 
     init {
-        Timber.d("🚀 UserListViewModel initialized")
+        Timber.d("UserListViewModel initialized")
 
         observeBookmarkChanges()
         observeNetworkChanges()
@@ -50,7 +51,7 @@ class UserListViewModel(
         viewModelScope.launch {
             bookmarkDao.getAllBookmarkedUsers().collect { bookmarkedUsers ->
                 val bookmarkedIds = bookmarkedUsers.map { it.id }.toSet()
-                Timber.d("📊 Database bookmark update: ${bookmarkedIds.size} bookmarks")
+                Timber.d("Database bookmark update: ${bookmarkedIds.size} bookmarks")
                 _bookmarkedUserIds.value = bookmarkedIds
             }
         }
@@ -61,7 +62,7 @@ class UserListViewModel(
             networkProvider.networkConnectivityFlow()
                 .distinctUntilChanged() // Prevent rapid toggles
                 .collect { isOnline ->
-                    Timber.d("🌐 Network state changed: $isOnline")
+                    Timber.d("Network state changed: $isOnline")
                     handleNetworkStateChange(isOnline)
                 }
         }
@@ -73,18 +74,17 @@ class UserListViewModel(
                 .debounceSearch(Constants.SEARCH_DEBOUNCE_MS)
                 .distinctUntilChanged()
                 .collect { debouncedQuery ->
-                    Timber.d("🔍 Debounced search query: '$debouncedQuery'")
+                    Timber.d("Debounced search query: '$debouncedQuery'")
                     updateState { copy(searchQuery = debouncedQuery) }
                 }
         }
     }
 
-    private suspend fun handleNetworkStateChange(isOnline: Boolean) {
+    private fun handleNetworkStateChange(isOnline: Boolean) {
         val currentState = state.value
         val hasBookmarkedUsers = _bookmarkedUserIds.value.isNotEmpty()
         val hasContent = currentState.cachedUsers.isNotEmpty()
 
-        // ✅ IMPROVED: Gradual state change with UX considerations
         updateState {
             copy(
                 isOnline = isOnline,
@@ -97,18 +97,17 @@ class UserListViewModel(
             )
         }
 
-        // ✅ FIXED: Use the helper methods from state
         val newState = state.value
         when {
-            // Connection was just restored - USE HELPER METHOD
+            // Connection was just restored
             newState.isConnectionJustRestored() -> {
-                Timber.d("🔄 Connection restored")
+                Timber.d("Connection restored")
                 sendEffect(UserListEffect.ConnectionRestored)
 
                 // If we were showing error, auto-clear it
                 if (currentState.showNetworkError) {
                     sendEffect(UserListEffect.ShowRefreshOption(
-                        UiText.DynamicString("Connection restored! Pull to refresh for latest data.")
+                        UiText.StringResource(R.string.connection_restored_pull_refresh)
                     ))
                 }
             }
@@ -122,17 +121,17 @@ class UserListViewModel(
                 when {
                     hasBookmarkedUsers -> {
                         sendEffect(UserListEffect.ShowRefreshOption(
-                            UiText.DynamicString("No internet. Showing your bookmarked users.")
+                            UiText.StringResource(R.string.no_internet_showing_bookmarks)
                         ))
                     }
                     hasContent -> {
                         sendEffect(UserListEffect.ShowRefreshOption(
-                            UiText.DynamicString("No internet. Showing cached content.")
+                            UiText.StringResource(R.string.no_internet_showing_cached)
                         ))
                     }
                     else -> {
                         sendEffect(UserListEffect.ShowError(
-                            UiText.DynamicString("No internet connection and no cached content available.")
+                            UiText.StringResource(R.string.no_internet_no_cached_content)
                         ))
                     }
                 }
@@ -149,7 +148,7 @@ class UserListViewModel(
         state.map { it.searchQuery }.distinctUntilChanged()
     ) { pagingData, bookmarkedIds, searchQuery ->
 
-        Timber.d("🔄 Combining data: bookmarks=${bookmarkedIds.size}, search='$searchQuery'")
+        Timber.d("Combining data: bookmarks=${bookmarkedIds.size}, search='$searchQuery'")
 
         pagingData
             .map { user ->
@@ -157,7 +156,6 @@ class UserListViewModel(
                 val isBookmarked = user.id?.let { it in bookmarkedIds } ?: false
                 val updatedUser = user.copy(isBookmarked = isBookmarked)
 
-                // ✅ FIXED: Cache users as we process them
                 updateCachedUsers(updatedUser)
 
                 updatedUser
@@ -210,27 +208,26 @@ class UserListViewModel(
     }
 
     override suspend fun handleIntent(intent: UserListIntent) {
-        Timber.d("🎯 Handling intent: ${intent::class.simpleName}")
+        Timber.d("Handling intent: ${intent::class.simpleName}")
 
         when (intent) {
             is UserListIntent.ToggleBookmark -> toggleBookmark(intent.user)
             is UserListIntent.NavigateToDetail -> navigateToDetail(intent.user)
             is UserListIntent.UpdateSearchQuery -> updateSearchQuery(intent.query)
             is UserListIntent.ClearSearch -> clearSearch()
-            // ✅ NEW: Handle network-related intents
             is UserListIntent.RetryConnection -> handleRetryConnection()
             is UserListIntent.RefreshAfterReconnection -> handleRefreshAfterReconnection()
         }
     }
 
     private fun updateSearchQuery(query: String) {
-        Timber.d("🔍 Updating search query to: '$query'")
+        Timber.d("Updating search query to: '$query'")
         _searchQuery.value = query
         updateState { copy(searchQuery = query) }
     }
 
     private fun clearSearch() {
-        Timber.d("🧹 Clearing search query")
+        Timber.d("Clearing search query")
         _searchQuery.value = ""
         updateState { copy(searchQuery = "") }
     }
@@ -238,11 +235,11 @@ class UserListViewModel(
     private fun handleRetryConnection() {
         if (networkProvider.isNetworkAvailable()) {
             sendEffect(UserListEffect.ShowRefreshOption(
-                UiText.DynamicString("Connection available! Pull to refresh.")
+                UiText.StringResource(R.string.connection_restored_pull_refresh)
             ))
         } else {
             sendEffect(UserListEffect.ShowError(
-                UiText.DynamicString("Still no internet connection.")
+                UiText.StringResource(R.string.still_no_internet_connection)
             ))
         }
     }
@@ -251,24 +248,24 @@ class UserListViewModel(
         // This could trigger a refresh of the paging source
         // For now, we'll just show a confirmation
         sendEffect(UserListEffect.ShowRefreshOption(
-            UiText.DynamicString("Refreshing with latest data...")
+            UiText.StringResource(R.string.refreshing_latest_data)
         ))
     }
 
     private fun toggleBookmark(user: User) {
         if (!user.isValid() || user.id == null) {
             Timber.w("Cannot bookmark invalid user: ${user.getDisplayName()}")
-            sendEffect(UserListEffect.ShowError(UiText.DynamicString("Cannot bookmark this user")))
+            sendEffect(UserListEffect.ShowError(UiText.StringResource(R.string.cannot_bookmark_user)))
             return
         }
 
-        Timber.d("⭐ Toggling bookmark for user: ${user.getDisplayName()}")
+        Timber.d("Toggling bookmark for user: ${user.getDisplayName()}")
 
         viewModelScope.launch {
             toggleBookmarkUseCase(user).fold(
                 onSuccess = {
                     val newBookmarkState = !user.isBookmarked
-                    Timber.d("✅ Successfully toggled bookmark for user: ${user.id}")
+                    Timber.d("Successfully toggled bookmark for user: ${user.id}")
 
                     _bookmarkedUserIds.update { ids ->
                         if (user.isBookmarked) {
@@ -281,7 +278,7 @@ class UserListViewModel(
                     sendEffect(UserListEffect.ShowBookmarkToggled(newBookmarkState))
                 },
                 onError = { error ->
-                    Timber.e("❌ Error toggling bookmark for user ${user.id}: $error")
+                    Timber.e("Error toggling bookmark for user ${user.id}: $error")
                     sendEffect(UserListEffect.ShowError(error.toUiText()))
                 }
             )
@@ -291,11 +288,11 @@ class UserListViewModel(
     private fun navigateToDetail(user: User) {
         if (!user.isValid() || user.id.isNullOrBlank()) {
             Timber.w("Cannot navigate to detail for invalid user: ${user.getDisplayName()}")
-            sendEffect(UserListEffect.ShowError(UiText.DynamicString("Cannot view details for this user")))
+            sendEffect(UserListEffect.ShowError(UiText.StringResource(R.string.cannot_view_user_details)))
             return
         }
 
-        Timber.d("🚀 Navigating to detail for user: ${user.getDisplayName()} (ID: ${user.id})")
+        Timber.d("Navigating to detail for user: ${user.getDisplayName()} (ID: ${user.id})")
         sendEffect(UserListEffect.NavigateToUserDetail(user))
     }
 }

@@ -224,7 +224,7 @@ class OfflineScenariosUITest {
         if (!networkErrorFound) {
             // At minimum, verify the screen loads without crashing
             composeTestRule.onRoot().assertExists()
-            println("⚠️ Network error text not found, but UI renders correctly")
+            println("Network error text not found, but UI renders correctly")
         }
     }
 
@@ -271,7 +271,7 @@ class OfflineScenariosUITest {
 
         if (!errorFound) {
             composeTestRule.onNodeWithContentDescription("Navigate back").assertExists()
-            println("⚠️ Error content not found, but UI structure is correct")
+            println("Error content not found, but UI structure is correct")
         }
     }
 

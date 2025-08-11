@@ -28,10 +28,10 @@ class UserPagingSource(
                 .map { it.toDomainModel() }
                 .filter { it.isValid() }
 
-            Timber.d("✅ Loaded ${bookmarkedUsers.size} offline users")
+            Timber.d("Loaded ${bookmarkedUsers.size} offline users")
             bookmarkedUsers
         } catch (e: Exception) {
-            Timber.e(e, "❌ Error loading offline bookmarked users")
+            Timber.e(e, "Error loading offline bookmarked users")
             emptyList()
         }
     }
@@ -47,18 +47,18 @@ class UserPagingSource(
         val page = params.key ?: Constants.INITIAL_PAGE
         val loadSize = params.loadSize
 
-        Timber.d("📄 load() start → page=$page, loadSize=$loadSize")
+        Timber.d("load() start → page=$page, loadSize=$loadSize")
 
         val startTime = System.currentTimeMillis()
 
         if (!networkProvider.isNetworkAvailable()) {
-            Timber.w("📵 No network - loading offline bookmarked users")
+            Timber.w("No network - loading offline bookmarked users")
 
             return try {
                 if (page == Constants.INITIAL_PAGE) {
                     val offlineUsers = loadOfflineBookmarkedUsers()
                     val elapsed = System.currentTimeMillis() - startTime
-                    Timber.d("⏳ Offline load complete in ${elapsed}ms, items=${offlineUsers.size}")
+                    Timber.d("Offline load complete in ${elapsed}ms, items=${offlineUsers.size}")
 
                     LoadResult.Page(
                         data = offlineUsers,
@@ -66,22 +66,22 @@ class UserPagingSource(
                         nextKey = null
                     )
                 } else {
-                    Timber.d("🔚 No more pages in offline mode")
+                    Timber.d("No more pages in offline mode")
                     LoadResult.Page(
                         data = emptyList(),
-                        prevKey = if (page == Constants.INITIAL_PAGE) null else page - 1,
+                        prevKey = page - 1,
                         nextKey = null
                     )
                 }
             } catch (e: Exception) {
-                Timber.e(e, "💥 Error loading offline data")
+                Timber.e(e, "Error loading offline data")
                 LoadResult.Error(e)
             }
         }
 
         return try {
             withTimeout(Constants.API_TIMEOUT) {
-                Timber.d("🌐 Fetching page=$page from API")
+                Timber.d("Fetching page=$page from API")
 
                 val response = api.getUsers(page = page, results = loadSize)
 
@@ -94,7 +94,7 @@ class UserPagingSource(
                 val bookmarkedIds = try {
                     bookmarkDao.getBookmarkedUserIds().toSet()
                 } catch (e: Exception) {
-                    Timber.w(e, "⚠️ Failed to get bookmarked IDs")
+                    Timber.w(e, "Failed to get bookmarked IDs")
                     emptySet()
                 }
 
@@ -104,7 +104,7 @@ class UserPagingSource(
                 }
 
                 val elapsed = System.currentTimeMillis() - startTime
-                Timber.d("✅ Page=$page loaded in ${elapsed}ms, items=${usersWithBookmarks.size}")
+                Timber.d("Page=$page loaded in ${elapsed}ms, items=${usersWithBookmarks.size}")
 
                 LoadResult.Page(
                     data = usersWithBookmarks,
@@ -113,10 +113,10 @@ class UserPagingSource(
                 )
             }
         } catch (e: TimeoutException) {
-            Timber.e("⏱️ Timeout loading page=$page after ${System.currentTimeMillis() - startTime}ms")
+            Timber.e("Timeout loading page=$page after ${System.currentTimeMillis() - startTime}ms")
             handleNetworkErrorWithFallback(e, page)
         } catch (e: Exception) {
-            Timber.e(e, "❌ Error loading page=$page after ${System.currentTimeMillis() - startTime}ms")
+            Timber.e(e, "Error loading page=$page after ${System.currentTimeMillis() - startTime}ms")
             handleNetworkErrorWithFallback(e, page)
         }
     }
@@ -129,7 +129,7 @@ class UserPagingSource(
         if (page == 1) {
             return try {
                 val offlineUsers = loadOfflineBookmarkedUsers()
-                Timber.d("🔄 Network error fallback: returning ${offlineUsers.size} offline users")
+                Timber.d("Network error fallback: returning ${offlineUsers.size} offline users")
 
                 LoadResult.Page(
                     data = offlineUsers,

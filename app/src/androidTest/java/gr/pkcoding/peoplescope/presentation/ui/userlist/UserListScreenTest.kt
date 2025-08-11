@@ -93,13 +93,13 @@ class UserListScreenUITest {
         getUsersPagedUseCase = mockk()
         toggleBookmarkUseCase = mockk()
         bookmarkDao = mockk()
-        networkProvider = mockk() // ✅ ADD: Mock network provider
+        networkProvider = mockk()
 
-        // ✅ ADD: Setup network provider mocks
+        // Setup network provider mocks
         every { networkProvider.isNetworkAvailable() } returns true
         every { networkProvider.networkConnectivityFlow() } returns flowOf(true)
 
-        // CRITICAL: Mock the Flow methods that ViewModel observes
+        // Mock the Flow methods that ViewModel observes
         every { bookmarkDao.getAllBookmarkedUsers() } returns flowOf(emptyList<BookmarkedUserEntity>())
         every { getUsersPagedUseCase() } returns flowOf(PagingData.from(testUsers))
 
@@ -108,7 +108,7 @@ class UserListScreenUITest {
             getUsersPagedUseCase = getUsersPagedUseCase,
             toggleBookmarkUseCase = toggleBookmarkUseCase,
             bookmarkDao = bookmarkDao,
-            networkProvider = networkProvider // ✅ ADD: Pass network provider
+            networkProvider = networkProvider
         )
     }
 
@@ -202,7 +202,7 @@ class UserListScreenUITest {
             .performTextInput("John")
 
         // Verify search query is updated in the state
-        // Note: This is a simplified test - in reality you'd want to verify
+        // Note: This is a simplified test - in reality we'd want to verify
         // that the filtering actually works in the UI
         composeTestRule.waitForIdle()
     }
@@ -326,8 +326,8 @@ class UserListScreenUITest {
             PeopleScopeTheme {
                 UserListScreen(
                     state = UserListState(
-                        isOnline = false,         // ✅ Offline
-                        isOfflineMode = true,     // ✅ Has bookmarks
+                        isOnline = false,
+                        isOfflineMode = true,
                         showNetworkError = false
                     ),
                     onIntent = {},
@@ -336,15 +336,14 @@ class UserListScreenUITest {
             }
         }
 
-        // ✅ Wait for all compositions and animations
+        // Wait for all compositions and animations
         composeTestRule.waitForIdle()
         Thread.sleep(500) // Give animations time
         composeTestRule.waitForIdle()
 
-        // ✅ More flexible assertion
         try {
             composeTestRule
-                .onNodeWithText("📱 Showing bookmarked users")
+                .onNodeWithText("Showing bookmarked users")
                 .assertIsDisplayed()
         } catch (_: AssertionError) {
             // Fallback: Just verify the screen loaded
@@ -352,7 +351,7 @@ class UserListScreenUITest {
                 .onNodeWithText("People")
                 .assertIsDisplayed()
 
-            println("⚠️ Network status bar text not found, but screen loaded successfully")
+            println("Network status bar text not found, but screen loaded successfully")
         }
     }
 }

@@ -7,5 +7,5 @@ import org.koin.dsl.module
 val appModule = module {
     single<String>(named("BaseUrl")) { Constants.BASE_URL }
 
-    // Future: Other app-wide configs will go here
+    // Future: Other app-wide configs like firebase will go here
 }

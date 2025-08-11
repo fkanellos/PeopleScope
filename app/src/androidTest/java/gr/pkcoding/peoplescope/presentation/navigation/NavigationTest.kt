@@ -2,8 +2,8 @@ package gr.pkcoding.peoplescope.presentation.navigation
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.navigation.testing.TestNavHostController
 import androidx.navigation.compose.ComposeNavigator
+import androidx.navigation.testing.TestNavHostController
 import gr.pkcoding.peoplescope.ui.theme.PeopleScopeTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -22,7 +22,7 @@ class SimpleNavigationTest {
 
     @Test
     fun navHost_initializes_successfully() {
-        // ✅ Test that NavHost can be created without crashing
+        //Test that NavHost can be created without crashing
         val navController = createTestNavController()
 
         composeTestRule.setContent {
@@ -133,7 +133,7 @@ class SimpleNavigationTest {
 
     @Test
     fun destinations_routes_areCorrect() {
-        // ✅ Simple test to verify route constants
+        // Simple test to verify route constants
         assertEquals("user_list", Destinations.UserList.route)
         assertEquals("user_detail/{userId}", Destinations.UserDetail.route)
 

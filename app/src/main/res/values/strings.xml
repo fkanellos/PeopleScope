@@ -63,4 +63,39 @@
     <string name="connection_restored_toast">📶 Internet connection restored!</string>
     <string name="connection_lost_offline_content">📵 Connection lost - showing offline content</string>
     <string name="user_bookmarked_successfully">User bookmarked successfully</string>
+
+    <!-- User Detail Screen strings -->
+    <string name="user_age_years">%d years old</string>
+
+    <!-- Contact Information -->
+    <string name="contact_information_title">Contact Information</string>
+    <string name="email_label">Email</string>
+    <string name="phone_label">Phone</string>
+    <string name="phones_label">Phones</string>
+    <string name="copy_content_description">Copy %s</string>
+
+    <!-- Location Information -->
+    <string name="location_title">Location</string>
+    <string name="location_label">Location</string>
+    <string name="nationality_label">Nationality</string>
+    <string name="not_available">Not available</string>
+
+    <!-- Additional Information -->
+    <string name="additional_information_title">Additional Information</string>
+    <string name="date_of_birth_label">Date of Birth</string>
+    <string name="timezone_label">Timezone</string>
+
+    <!-- Toast messages -->
+    <string name="email_copied_toast">📧 Email copied to clipboard</string>
+    <string name="phone_copied_toast">📞 Phone numbers copied to clipboard</string>
+    <string name="no_email_available_toast">No email available</string>
+    <string name="no_phone_available_toast">No phone numbers available</string>
+
+    <string name="cannot_bookmark_user">Cannot bookmark this user</string>
+    <string name="no_internet_showing_bookmarks">No internet. Showing your bookmarked users.</string>
+    <string name="no_internet_no_cached_content">No internet connection and no cached content available.</string>
+    <string name="still_no_internet_connection">Still no internet connection.</string>
+    <string name="refreshing_latest_data">Refreshing with latest data…</string>
+    <string name="connection_restored_pull_refresh">Connection restored! Pull to refresh for latest data.</string>
+    <string name="no_internet_showing_cached">No internet. Showing cached content.</string>
 </resources>

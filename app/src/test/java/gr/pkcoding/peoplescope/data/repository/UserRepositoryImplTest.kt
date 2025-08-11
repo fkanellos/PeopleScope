@@ -4,13 +4,46 @@ import gr.pkcoding.peoplescope.data.local.dao.BookmarkDao
 import gr.pkcoding.peoplescope.data.local.entity.BookmarkedUserEntity
 import gr.pkcoding.peoplescope.data.network.NetworkConnectivityProvider
 import gr.pkcoding.peoplescope.data.remote.api.RandomUserApi
-import gr.pkcoding.peoplescope.data.remote.dto.*
-import gr.pkcoding.peoplescope.domain.model.*
-import io.mockk.*
+import gr.pkcoding.peoplescope.data.remote.dto.CoordinatesDto
+import gr.pkcoding.peoplescope.data.remote.dto.DobDto
+import gr.pkcoding.peoplescope.data.remote.dto.IdDto
+import gr.pkcoding.peoplescope.data.remote.dto.InfoDto
+import gr.pkcoding.peoplescope.data.remote.dto.LocationDto
+import gr.pkcoding.peoplescope.data.remote.dto.LoginDto
+import gr.pkcoding.peoplescope.data.remote.dto.NameDto
+import gr.pkcoding.peoplescope.data.remote.dto.PictureDto
+import gr.pkcoding.peoplescope.data.remote.dto.RegisteredDto
+import gr.pkcoding.peoplescope.data.remote.dto.StreetDto
+import gr.pkcoding.peoplescope.data.remote.dto.TimezoneDto
+import gr.pkcoding.peoplescope.data.remote.dto.UserDto
+import gr.pkcoding.peoplescope.data.remote.dto.UserResponse
+import gr.pkcoding.peoplescope.domain.model.Coordinates
+import gr.pkcoding.peoplescope.domain.model.DataError
+import gr.pkcoding.peoplescope.domain.model.DateOfBirth
+import gr.pkcoding.peoplescope.domain.model.LocalError
+import gr.pkcoding.peoplescope.domain.model.Location
+import gr.pkcoding.peoplescope.domain.model.Name
+import gr.pkcoding.peoplescope.domain.model.NetworkError
+import gr.pkcoding.peoplescope.domain.model.Picture
+import gr.pkcoding.peoplescope.domain.model.Result
+import gr.pkcoding.peoplescope.domain.model.Street
+import gr.pkcoding.peoplescope.domain.model.Timezone
+import gr.pkcoding.peoplescope.domain.model.User
+import gr.pkcoding.peoplescope.domain.model.UserError
+import io.mockk.Runs
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -23,7 +56,7 @@ class UserRepositoryImplTest {
     private lateinit var api: RandomUserApi
     private lateinit var bookmarkDao: BookmarkDao
     private lateinit var repository: UserRepositoryImpl
-    private lateinit var networkProvider: NetworkConnectivityProvider // ✅ ADD: Network provider
+    private lateinit var networkProvider: NetworkConnectivityProvider
 
     private val testUserDto = UserDto(
         gender = "male",
@@ -87,13 +120,12 @@ class UserRepositoryImplTest {
     fun setup() {
         api = mockk()
         bookmarkDao = mockk()
-        networkProvider = mockk() // ✅ ADD: Mock network provider
+        networkProvider = mockk()
 
-        // ✅ ADD: Setup default network state (online)
+        // Setup default network state (online)
         every { networkProvider.isNetworkAvailable() } returns true
         every { networkProvider.networkConnectivityFlow() } returns flowOf(true)
 
-        // ✅ FIX: Pass all required parameters
         repository = UserRepositoryImpl(api, bookmarkDao, networkProvider)
     }
 
@@ -101,7 +133,7 @@ class UserRepositoryImplTest {
     fun `getUsers should return success when api call succeeds`() = runTest {
         // Given
         coEvery { api.getUsers(1, 25) } returns testUserResponse
-        coEvery { bookmarkDao.getBookmarkedUserIds() } returns emptyList() // ✅ FIX: Use correct method
+        coEvery { bookmarkDao.getBookmarkedUserIds() } returns emptyList()
 
         // When
         val result = repository.getUsers(1, 25)
@@ -113,8 +145,6 @@ class UserRepositoryImplTest {
         assertEquals("test-uuid", users?.first()?.id)
         assertFalse(users?.first()?.isBookmarked ?: true)
     }
-
-    // ✅ REPLACE the failing test in UserRepositoryImplTest.kt with this version:
 
     @Test
     fun `getUsers should return error when api call fails on page 2`() = runTest {
@@ -132,7 +162,6 @@ class UserRepositoryImplTest {
         assertEquals(NetworkError.NO_INTERNET, (error as DataError.Network).error)
     }
 
-    // ✅ ADD this new test that shows the fallback behavior:
     @Test
     fun `getUsers should fallback to bookmarks when api call fails on page 1`() = runTest {
         // Given - API fails on page 1, but we have bookmarked users
@@ -185,36 +214,7 @@ class UserRepositoryImplTest {
     @Test
     fun `getUsers should mark bookmarked users correctly`() = runTest {
         // Given
-        val bookmarkedEntity = BookmarkedUserEntity(
-            id = "test-uuid",
-            gender = "male",
-            title = "Mr",
-            firstName = "John",
-            lastName = "Doe",
-            email = "john.doe@example.com",
-            phone = "+1234567890",
-            cell = "+0987654321",
-            pictureLarge = "large.jpg",
-            pictureMedium = "medium.jpg",
-            pictureThumbnail = "thumbnail.jpg",
-            streetNumber = 123,
-            streetName = "Main St",
-            city = "New York",
-            state = "NY",
-            country = "USA",
-            postcode = "10001",
-            latitude = "40.7128",
-            longitude = "-74.0060",
-            timezoneOffset = "-5:00",
-            timezoneDescription = "Eastern Time",
-            dobDate = "1990-01-01T00:00:00.000Z",
-            dobAge = 33,
-            nationality = "US",
-            bookmarkedAt = System.currentTimeMillis()
-        )
-
         coEvery { api.getUsers(1, 25) } returns testUserResponse
-        // ✅ Fix: Mock the new method που χρησιμοποιούμε τώρα
         coEvery { bookmarkDao.getBookmarkedUserIds() } returns listOf("test-uuid")
 
         // When
@@ -231,7 +231,6 @@ class UserRepositoryImplTest {
     fun `getUsers should return empty list when no bookmarked users`() = runTest {
         // Given
         coEvery { api.getUsers(1, 25) } returns testUserResponse
-        // ✅ Mock empty bookmark IDs
         coEvery { bookmarkDao.getBookmarkedUserIds() } returns emptyList()
 
         // When
@@ -248,9 +247,9 @@ class UserRepositoryImplTest {
     fun `getUsers handles nullable fields correctly`() = runTest {
         // Given - UserDto με null fields
         val userDtoWithNulls = UserDto(
-            gender = null, // ✅ null gender
-            name = NameDto("Mr", "John", null), // ✅ null last name - should be filtered out
-            location = null, // ✅ null location
+            gender = null,
+            name = NameDto("Mr", "John", null),
+            location = null,
             email = null,
             login = LoginDto(uuid = "test-uuid", username = null, password = null, salt = null, md5 = null, sha1 = null, sha256 = null),
             dob = null,
@@ -277,7 +276,6 @@ class UserRepositoryImplTest {
         assertTrue(result is Result.Success)
         val users = result.getOrNull()
         assertNotNull(users)
-        // ✅ Με τη νέα validation, user με null last name θα φιλτραριστεί
         assertTrue("Invalid users should be filtered out", users!!.isEmpty())
     }
 
@@ -292,7 +290,6 @@ class UserRepositoryImplTest {
         // Then
         assertTrue(result is Result.Error)
         val error = (result as Result.Error).error
-        // ✅ Αφαιρέθηκε το redundant check - το error είναι ήδη DataError.Local από το method signature
         assertEquals(LocalError.DATABASE_ERROR, error.error)
     }
 
@@ -520,7 +517,6 @@ class UserRepositoryImplTest {
         coVerify { bookmarkDao.getBookmarkedUserById("test-uuid") }
     }
 
-    // ✅ ADD: New tests for network scenarios
     @Test
     fun `getUsers should return offline users when no network available`() = runTest {
         // Given - No network available

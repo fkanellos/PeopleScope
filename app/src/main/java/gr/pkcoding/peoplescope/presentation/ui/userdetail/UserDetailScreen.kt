@@ -85,9 +85,9 @@ fun UserDetailScreen(
         {
             currentUser?.email?.takeIf { it.isNotBlank() }?.let { email ->
                 clipboardManager.setText(AnnotatedString(email))
-                context.showToast("📧 Email copied to clipboard")
-                Timber.d("📋 Email copied: $email")
-            } ?: context.showToast("No email available")
+                context.showToast(context.getString(R.string.email_copied_toast))
+                Timber.d("Email copied: $email")
+            } ?: context.showToast(context.getString(R.string.no_email_available_toast))
         }
     }
     val onCopyPhone = remember(currentUser?.phone, currentUser?.cell) {
@@ -99,10 +99,10 @@ fun UserDetailScreen(
             if (phoneNumbers.isNotEmpty()) {
                 val phoneText = phoneNumbers.joinToString(" • ")
                 clipboardManager.setText(AnnotatedString(phoneText))
-                context.showToast("📞 Phone numbers copied to clipboard")
-                Timber.d("📋 Phone copied: $phoneText")
+                context.showToast(context.getString(R.string.phone_copied_toast))
+                Timber.d("Phone copied: $phoneText")
             } else {
-                context.showToast("No phone numbers available")
+                context.showToast(context.getString(R.string.no_phone_available_toast))
             }
         }
     }
@@ -222,7 +222,7 @@ private fun ContactInfoCard(
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                text = "Contact Information",
+                text = stringResource(R.string.contact_information_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -232,7 +232,7 @@ private fun ContactInfoCard(
             user.email?.takeIf { it.isNotBlank() }?.let { email ->
                 ContactInfoRow(
                     icon = Icons.Default.Email,
-                    label = "Email",
+                    label = stringResource(R.string.email_label),
                     value = email,
                     onCopy = onCopyEmail
                 )
@@ -246,7 +246,9 @@ private fun ContactInfoCard(
             if (phoneNumbers.isNotEmpty()) {
                 ContactInfoRow(
                     icon = Icons.Default.Phone,
-                    label = "Phone${if (phoneNumbers.size > 1) "s" else ""}",
+                    label = stringResource(
+                        if (phoneNumbers.size > 1) R.string.phones_label else R.string.phone_label
+                    ),
                     value = phoneNumbers.joinToString(" • "),
                     onCopy = onCopyPhone
                 )
@@ -314,7 +316,7 @@ private fun ContactInfoRow(
         ) {
             Icon(
                 painter = painterResource(R.drawable.content_copy_24px),
-                contentDescription = "Copy $label",
+                contentDescription = stringResource(R.string.copy_content_description, label),
                 tint = MaterialTheme.colorScheme.onSecondaryContainer,
                 modifier = Modifier.size(18.dp)
             )
@@ -385,7 +387,7 @@ private fun ProfileCard(
 
             user.dob?.age?.let { age ->
                 Text(
-                    text = "$age years old",
+                    text = stringResource(R.string.user_age_years, age),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -416,7 +418,7 @@ private fun LocationInfoCard(user: User) {
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                text = "Location",
+                text = stringResource(R.string.location_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -425,14 +427,14 @@ private fun LocationInfoCard(user: User) {
 
             InfoRow(
                 icon = Icons.Default.LocationOn,
-                label = "Location",
-                value = user.location.getDisplayLocation().ifBlank { "Not available" }
+                label = stringResource(R.string.location_label),
+                value = user.location.getDisplayLocation().ifBlank { stringResource(R.string.not_available) }
             )
 
             user.nationality?.takeIf { it.isNotBlank() }?.let { nationality ->
                 InfoRow(
                     icon = Icons.Default.Person,
-                    label = "Nationality",
+                    label = stringResource(R.string.nationality_label),
                     value = nationality.uppercase()
                 )
             }
@@ -451,7 +453,7 @@ private fun AdditionalInfoCard(user: User) {
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                text = "Additional Information",
+                text = stringResource(R.string.additional_information_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -460,7 +462,7 @@ private fun AdditionalInfoCard(user: User) {
 
             user.dob?.date?.let { dobDate ->
                 SimpleInfoRow(
-                    label = "Date of Birth",
+                    label = stringResource(R.string.date_of_birth_label),
                     value = dobDate.formatDate()
                 )
             }
@@ -473,7 +475,7 @@ private fun AdditionalInfoCard(user: User) {
 
                 if (timezoneText.isNotBlank()) {
                     SimpleInfoRow(
-                        label = "Timezone",
+                        label = stringResource(R.string.timezone_label),
                         value = timezoneText
                     )
                 }

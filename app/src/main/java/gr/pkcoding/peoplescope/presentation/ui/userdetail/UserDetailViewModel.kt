@@ -61,12 +61,12 @@ class UserDetailViewModel(
         val currentUser = state.value.user ?: return
 
         viewModelScope.launch {
-            Timber.d("⭐ Detail screen: Toggling bookmark for ${currentUser.name?.getFullName()}")
+            Timber.d("Detail screen: Toggling bookmark for ${currentUser.name?.getFullName()}")
 
             toggleBookmarkUseCase(currentUser).fold(
                 onSuccess = {
                     val newBookmarkStatus = !state.value.isBookmarked
-                    Timber.d("✅ Detail screen: Successfully toggled bookmark, new state: $newBookmarkStatus")
+                    Timber.d("Detail screen: Successfully toggled bookmark, new state: $newBookmarkStatus")
 
                     // Update local state immediately for UI responsiveness
                     updateState {
@@ -80,7 +80,7 @@ class UserDetailViewModel(
                     // Database update will automatically sync with UserList via Flow observer
                 },
                 onError = { error ->
-                    Timber.e("❌ Detail screen: Error toggling bookmark: $error")
+                    Timber.e("Detail screen: Error toggling bookmark: $error")
                     sendEffect(UserDetailEffect.ShowError(error.toUiText()))
                 }
             )
