@@ -515,4 +515,5 @@ class UserListViewModelTest {
         assertTrue("Should be online", currentState.isOnline)
         assertTrue("Should detect connection just restored", currentState.isConnectionJustRestored())
         assertFalse("Should not show network error", currentState.showNetworkError)
-    }}
+    }
+}
