@@ -1,13 +1,12 @@
 package gr.pkcoding.peoplescope.presentation.ui.userdetail
 
 import androidx.lifecycle.viewModelScope
-import gr.pkcoding.peoplescope.domain.model.User
 import gr.pkcoding.peoplescope.domain.usecase.GetUserDetailsUseCase
 import gr.pkcoding.peoplescope.domain.usecase.IsUserBookmarkedUseCase
 import gr.pkcoding.peoplescope.domain.usecase.ToggleBookmarkUseCase
 import gr.pkcoding.peoplescope.presentation.base.BaseViewModel
 import gr.pkcoding.peoplescope.presentation.toUiText
-import gr.pkcoding.peoplescope.presentation.ui.userlist.fold
+import gr.pkcoding.peoplescope.utils.fold
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import timber.log.Timber
