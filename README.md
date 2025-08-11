@@ -21,7 +21,6 @@ A **production-ready** Android application for browsing and bookmarking random u
 - **🌐 Network Resilience** - Automatic offline/online detection
 - **🔄 Real-time Sync** - Bookmark status updates across screens
 - **⚡ Performance** - Optimized for large datasets and memory efficiency
-- **♿ Accessibility** - Screen reader support and semantic markup
 - **🎯 Error Handling** - Comprehensive error states with recovery options
 
 ## 🏗️ Architecture
@@ -88,9 +87,6 @@ android-studio .
 ```bash
 # Debug build (with logging and debugging features)
 ./gradlew assembleDebug
-
-# Release build (optimized and obfuscated)
-./gradlew assembleRelease
 ```
 ## 📦 APK Downloads
 
@@ -103,7 +99,6 @@ Every push to `main` or `develop` automatically generates APKs that you can down
 3. **Scroll to "Artifacts" section**
 4. **Download your APK:**
     - 📱 `debug-apk-XXX` - Debug version with logging
-    - 🚀 `release-apk-XXX` - Optimized release version
 
 ### 🛠️ Manual Build Commands
 
@@ -195,12 +190,6 @@ Every push to `main` or `develop` automatically generates APKs that you can down
 - ✅ **Artifact Generation** - APK and test reports
 - ✅ **Performance Monitoring** - Build time and APK size tracking
 
-### **Release Process**
-1. **Development** → Feature branches with tests
-2. **Pull Request** → Automated CI checks + code review
-3. **Merge** → Deploy to internal testing
-4. **Release** → Production deployment with monitoring
-
 ## 📐 Project Structure
 
 ```
@@ -249,8 +238,6 @@ app/src/main/java/gr/pkcoding/peoplescope/
 
 ### **Material 3 Implementation**
 - **🎨 Dynamic Colors** - System theme support
-- **🌙 Dark Mode** - Automatic theme switching
-- **♿ Accessibility** - WCAG compliance
 - **📱 Responsive Design** - Adaptive layouts for different screen sizes
 
 ### **UI Components**
@@ -341,7 +328,6 @@ Release builds include comprehensive ProGuard rules for:
 - **📏 Kotlin Style Guide** - Official Kotlin conventions
 - **🧪 Test Coverage** - Minimum 90% for new code
 - **📝 Documentation** - KDoc for public APIs
-- **🔍 Code Review** - All PRs require review
 
 ## 📄 License & Attribution
 
@@ -353,12 +339,6 @@ This project is created for **educational and portfolio purposes**.
 - **🎨 Material Design** - Google's design system
 - **🏗️ Android Architecture Components** - Google's architecture guidance
 - **📚 Open Source Libraries** - All the amazing libraries that made this possible
-
-### **Contact**
-- **👨‍💻 Developer**: [Your Name]
-- **📧 Email**: [your.email@example.com]
-- **💼 LinkedIn**: [Your LinkedIn Profile]
-- **🐙 GitHub**: [Your GitHub Profile]
 
 ---
 
