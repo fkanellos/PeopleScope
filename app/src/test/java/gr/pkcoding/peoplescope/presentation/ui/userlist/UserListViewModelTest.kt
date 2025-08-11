@@ -5,17 +5,37 @@ import app.cash.turbine.test
 import gr.pkcoding.peoplescope.data.local.dao.BookmarkDao
 import gr.pkcoding.peoplescope.data.local.entity.BookmarkedUserEntity
 import gr.pkcoding.peoplescope.data.network.NetworkConnectivityProvider
-import gr.pkcoding.peoplescope.domain.model.*
+import gr.pkcoding.peoplescope.domain.model.Coordinates
+import gr.pkcoding.peoplescope.domain.model.DataError
+import gr.pkcoding.peoplescope.domain.model.DateOfBirth
+import gr.pkcoding.peoplescope.domain.model.LocalError
+import gr.pkcoding.peoplescope.domain.model.Location
+import gr.pkcoding.peoplescope.domain.model.Name
+import gr.pkcoding.peoplescope.domain.model.Picture
+import gr.pkcoding.peoplescope.domain.model.Result
+import gr.pkcoding.peoplescope.domain.model.Street
+import gr.pkcoding.peoplescope.domain.model.Timezone
+import gr.pkcoding.peoplescope.domain.model.User
 import gr.pkcoding.peoplescope.domain.usecase.GetUsersPagedUseCase
 import gr.pkcoding.peoplescope.domain.usecase.ToggleBookmarkUseCase
-import io.mockk.*
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.*
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -267,7 +287,6 @@ class UserListViewModelTest {
         assertEquals(false, state.showNetworkError)
     }
 
-    // ✅ ADD: Test network error when no internet and no bookmarks
     @Test
     fun `network error should be shown when no internet and no bookmarks`() = testScope.runTest {
         // Given - Offline without bookmarks
@@ -286,8 +305,217 @@ class UserListViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.state.first()
-        assertEquals(false, state.isOnline)
-        assertEquals(false, state.isOfflineMode)
-        assertEquals(true, state.showNetworkError) // Should show network error
+        assertFalse("Should be offline", state.isOnline)
+        assertFalse("Should not show offline mode", state.isOfflineMode)
+        assertTrue("Should show network error", state.showNetworkError)
+    }
+    private fun createViewModel(
+        initialNetworkState: Boolean = true,
+        networkStateFlow: kotlinx.coroutines.flow.Flow<Boolean> = flowOf(true)
+    ): UserListViewModel {
+        every { networkProvider.isNetworkAvailable() } returns initialNetworkState
+        every { networkProvider.networkConnectivityFlow() } returns networkStateFlow
+
+        return UserListViewModel(
+            getUsersPagedUseCase = getUsersPagedUseCase,
+            toggleBookmarkUseCase = toggleBookmarkUseCase,
+            bookmarkDao = bookmarkDao,
+            networkProvider = networkProvider
+        )
+    }
+
+    @Test
+    fun `network state change from online to offline updates state correctly`() = testScope.runTest {
+        // Given - Start online, then go offline
+        viewModel = createViewModel(
+            initialNetworkState = true,
+            networkStateFlow = flowOf(true, false)
+        )
+
+        advanceUntilIdle()
+
+        // When & Then - Just check state changes, not effects
+        viewModel.state.test {
+            var state = awaitItem()
+
+            // Wait for offline state
+            while (state.isOnline) {
+                state = awaitItem()
+            }
+
+            // Verify offline state
+            assertFalse("Should be offline", state.isOnline)
+
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `network state change from offline to online updates state correctly`() = testScope.runTest {
+        // Given - Start offline, then go online
+        viewModel = createViewModel(
+            initialNetworkState = false,
+            networkStateFlow = flowOf(false, true)
+        )
+
+        advanceUntilIdle()
+
+        // When & Then - Just check state changes
+        viewModel.state.test {
+            var state = awaitItem()
+
+            // Wait for online state
+            while (!state.isOnline) {
+                state = awaitItem()
+            }
+
+            // Verify online state
+            assertTrue("Should be online", state.isOnline)
+
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+    @Test
+    fun `state tracks connection changes correctly using helper methods`() = testScope.runTest {
+        // Given - Start online
+        viewModel = createViewModel(
+            initialNetworkState = true,
+            networkStateFlow = flowOf(true)
+        )
+
+        advanceUntilIdle()
+
+        // Then - Initial state
+        viewModel.state.test {
+            val initialState = awaitItem()
+            assertTrue("Should be online initially", initialState.isOnline)
+            assertTrue("Last online state should be true", initialState.lastOnlineState)
+            assertFalse("Should not show connection just lost", initialState.isConnectionJustLost())
+            assertFalse("Should not show connection just restored", initialState.isConnectionJustRestored())
+
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `going offline with no bookmarks shows network error`() = testScope.runTest {
+        // Given - No bookmarked users
+        every { bookmarkDao.getAllBookmarkedUsers() } returns flowOf(emptyList())
+
+        viewModel = createViewModel(
+            initialNetworkState = true,
+            networkStateFlow = flowOf(true, false)
+        )
+
+        advanceUntilIdle()
+
+        // When & Then
+        viewModel.state.test {
+            var state = awaitItem()
+            while (state.isOnline) {
+                state = awaitItem()
+            }
+
+            // Should show network error when offline with no content
+            assertTrue("Should show network error", state.shouldShowNetworkError())
+            assertFalse("Should not show offline mode", state.isOfflineMode)
+
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `going offline with bookmarks shows offline mode`() = testScope.runTest {
+        // Given - Has bookmarked users
+        val bookmarkedUsers = listOf(
+            BookmarkedUserEntity(
+                id = "bookmark-1",
+                gender = "male",
+                title = "Mr",
+                firstName = "Bookmark",
+                lastName = "User",
+                email = "bookmark@example.com",
+                phone = "+1234567890",
+                cell = "+0987654321",
+                pictureLarge = "large.jpg",
+                pictureMedium = "medium.jpg",
+                pictureThumbnail = "thumb.jpg",
+                streetNumber = 123,
+                streetName = "Street",
+                city = "City",
+                state = "State",
+                country = "Country",
+                postcode = "12345",
+                latitude = "0",
+                longitude = "0",
+                timezoneOffset = "+0",
+                timezoneDescription = "UTC",
+                dobDate = "1990-01-01",
+                dobAge = 33,
+                nationality = "US",
+                bookmarkedAt = System.currentTimeMillis()
+            )
+        )
+        every { bookmarkDao.getAllBookmarkedUsers() } returns flowOf(bookmarkedUsers)
+
+        viewModel = createViewModel(
+            initialNetworkState = true,
+            networkStateFlow = flowOf(true, false)
+        )
+
+        advanceUntilIdle()
+
+        // When & Then - Just check basic state properties
+        viewModel.state.test {
+            var state = awaitItem()
+            while (state.isOnline) {
+                state = awaitItem()
+            }
+
+            // ✅ ΑΛΛΑΓΗ: Χρήση μόνο των πραγματικών properties
+            assertFalse("Should be offline", state.isOnline)
+            assertTrue("Should show offline mode", state.isOfflineMode)
+            assertFalse("Should not show network error", state.showNetworkError)
+
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `connection restored effect includes refresh option when had error`() = testScope.runTest {
+        // Given - Start offline with no content, then go online
+        every { bookmarkDao.getAllBookmarkedUsers() } returns flowOf(emptyList())
+
+        viewModel = createViewModel(
+            initialNetworkState = false,
+            networkStateFlow = flowOf(false, true)
+        )
+
+        advanceUntilIdle()
+
+        // When & Then
+        viewModel.effect.test {
+            var foundConnectionRestored = false
+            var foundRefreshOption = false
+
+            while (!foundConnectionRestored || !foundRefreshOption) {
+                when (val effect = awaitItem()) {
+                    is UserListEffect.ConnectionRestored -> {
+                        foundConnectionRestored = true
+                    }
+                    is UserListEffect.ShowRefreshOption -> {
+                        foundRefreshOption = true
+                        assertTrue("Refresh option should mention connection restored",
+                            effect.message.toString().contains("Connection restored", ignoreCase = true))
+                    }
+                    else -> {
+                        // Ignore other effects
+                    }
+                }
+            }
+
+            assertTrue("Should have found ConnectionRestored effect", foundConnectionRestored)
+            assertTrue("Should have found ShowRefreshOption effect", foundRefreshOption)
+        }
     }
 }
