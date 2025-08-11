@@ -42,7 +42,6 @@ cd PeopleScope
 
 **Automated builds available in [GitHub Actions](../../actions)**
 - 📱 Debug APK - Latest development version
-- 🚀 Release APK - Production-ready build
 
 ## 🧪 Testing
 
