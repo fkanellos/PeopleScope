@@ -28,19 +28,16 @@ object NetworkModule {
             .readTimeout(Constants.NETWORK_TIMEOUT, TimeUnit.SECONDS)
             .writeTimeout(Constants.NETWORK_TIMEOUT, TimeUnit.SECONDS)
             .build()
-            .also {
-                Timber.d("OkHttpClient created with base URL: ${Constants.BASE_URL}")
-            }
     }
 
-    fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
+    fun provideRetrofit(okHttpClient: OkHttpClient, baseUrl: String): Retrofit {
         return Retrofit.Builder()
-            .baseUrl(Constants.BASE_URL)
+            .baseUrl(baseUrl)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .also {
-                Timber.d("Retrofit created with base URL: ${Constants.BASE_URL}")
+                Timber.d("Retrofit created with base URL: $baseUrl")
             }
     }
 }

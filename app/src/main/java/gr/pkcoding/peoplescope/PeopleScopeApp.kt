@@ -15,13 +15,11 @@ import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
 import timber.log.Timber
 
-
-
 class PeopleScopeApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        // Initialize Timber for logging
+        // Initialize Timber
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
         }
@@ -51,7 +49,7 @@ class PeopleScopeApp : Application() {
                     .maxSizeBytes(Constants.DISK_CACHE_SIZE)
                     .build()
             }
-            .crossfade(150) //false
+            .crossfade(150)
             .respectCacheHeaders(false)
             .build()
         Coil.setImageLoader(imageLoader)

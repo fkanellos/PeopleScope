@@ -10,13 +10,19 @@ import gr.pkcoding.peoplescope.data.remote.api.RandomUserApi
 import gr.pkcoding.peoplescope.data.repository.UserRepositoryImpl
 import gr.pkcoding.peoplescope.domain.repository.UserRepository
 import org.koin.android.ext.koin.androidContext
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import retrofit2.Retrofit
 
 val dataModule = module {
     // Network dependencies
     single { NetworkModule.provideOkHttpClient() }
-    single { NetworkModule.provideRetrofit(get()) }
+    single {
+        NetworkModule.provideRetrofit(
+            okHttpClient = get(),
+            baseUrl = get(named("BaseUrl"))
+        )
+    }
     single<RandomUserApi> { get<Retrofit>().create(RandomUserApi::class.java) }
 
     single<NetworkConnectivityProvider> {

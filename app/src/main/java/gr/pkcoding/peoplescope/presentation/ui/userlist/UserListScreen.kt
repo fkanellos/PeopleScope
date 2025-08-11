@@ -78,7 +78,6 @@ import gr.pkcoding.peoplescope.presentation.ui.components.SearchBar
 import gr.pkcoding.peoplescope.presentation.ui.components.UserCard
 import gr.pkcoding.peoplescope.presentation.ui.components.error_views.EnhancedNetworkStatusBar
 import gr.pkcoding.peoplescope.presentation.ui.components.error_views.ErrorView
-import gr.pkcoding.peoplescope.presentation.ui.components.error_views.NetworkTransitionCard
 import gr.pkcoding.peoplescope.presentation.ui.components.error_views.NoInternetErrorView
 import gr.pkcoding.peoplescope.presentation.ui.components.error_views.SmartNetworkIndicator
 import kotlinx.coroutines.launch
@@ -280,34 +279,6 @@ private fun UserListContent(
 
     Box(modifier = Modifier.fillMaxSize()) {
 
-        NetworkTransitionCard(
-            isVisible = showConnectionRestored,
-            title = stringResource(R.string.connection_restored_title),
-            message = stringResource(R.string.connection_restored_message),
-            actionText = stringResource(R.string.refresh_now),
-            onActionClick = {
-                onIntent(UserListIntent.RefreshAfterReconnection)
-                showConnectionRestored = false
-            },
-            onDismiss = { showConnectionRestored = false }
-        )
-
-        NetworkTransitionCard(
-            isVisible = showConnectionLost,
-            title = stringResource(R.string.connection_lost_title),
-            message = if (state.cachedUsers.isNotEmpty()) {
-                stringResource(R.string.connection_lost_message_with_cache)
-            } else {
-                stringResource(R.string.connection_lost_message_no_cache)
-            },
-            actionText = stringResource(R.string.retry),
-            onActionClick = {
-                onIntent(UserListIntent.RetryConnection)
-                showConnectionLost = false
-            },
-            onDismiss = { showConnectionLost = false }
-        )
-
         when {
             lazyPagingItems.loadState.refresh is LoadState.Loading && lazyPagingItems.itemCount == 0 -> {
                 LoadingView(useShimmer = true)
@@ -323,14 +294,6 @@ private fun UserListContent(
                                 onIntent(UserListIntent.RetryConnection)
                                 lazyPagingItems.retry()
                             }
-                        )
-                    } else {
-                        UserListWithError(
-                            lazyPagingItems = lazyPagingItems,
-                            listState = listState,
-                            onToggleBookmark = onToggleBookmark,
-                            onNavigateToDetail = onNavigateToDetail,
-                            errorMessage = stringResource(R.string.no_internet_showing_offline)
                         )
                     }
                 } else {
@@ -465,39 +428,5 @@ private fun UserListWithContent(
 
             else -> {}
         }
-    }
-}
-
-@Composable
-private fun UserListWithError(
-    lazyPagingItems: LazyPagingItems<User>,
-    listState: LazyListState,
-    onToggleBookmark: (User) -> Unit,
-    onNavigateToDetail: (User) -> Unit,
-    errorMessage: String
-) {
-    Column {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer
-            )
-        ) {
-            Text(
-                text = errorMessage,
-                modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-        }
-
-        UserListWithContent(
-            lazyPagingItems = lazyPagingItems,
-            listState = listState,
-            onToggleBookmark = onToggleBookmark,
-            onNavigateToDetail = onNavigateToDetail
-        )
     }
 }

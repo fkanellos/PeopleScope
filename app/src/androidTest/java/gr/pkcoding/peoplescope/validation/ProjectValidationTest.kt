@@ -82,28 +82,6 @@ class ProjectValidationTest {
     }
 
     @Test
-    fun validateNavigationDestinations() {
-        // Verify navigation destinations are accessible
-        try {
-            val destinationsClass = Class.forName("$packageName.presentation.navigation.Destinations")
-            assertNotNull("Destinations class should exist", destinationsClass)
-
-            // Verify UserList destination
-            val userListField = destinationsClass.getDeclaredField("UserList")
-            assertNotNull("UserList destination should exist", userListField)
-
-            // Verify UserDetail destination
-            val userDetailField = destinationsClass.getDeclaredField("UserDetail")
-            assertNotNull("UserDetail destination should exist", userDetailField)
-
-        } catch (e: ClassNotFoundException) {
-            fail("Navigation Destinations class not found: ${e.message}")
-        } catch (e: NoSuchFieldException) {
-            fail("Required navigation destination not found: ${e.message}")
-        }
-    }
-
-    @Test
     fun validateDomainModels() {
         try {
             // Verify core domain models exist
@@ -419,15 +397,41 @@ class ProjectValidationTest {
     fun validateThemeAndResources() {
         val resources = context.resources
 
-        // Verify theme exists
-        val themeId = resources.getIdentifier("Theme_PeopleScope", "style", packageName)
+        val themeId = resources.getIdentifier("Theme.PeopleScope", "style", packageName)
         assertTrue("App theme should exist", themeId != 0)
 
-        // Verify color resources exist
+        val appNameId = resources.getIdentifier("app_name", "string", packageName)
+        assertTrue("App name resource should exist", appNameId != 0)
+        val appName = resources.getString(appNameId)
+        assertEquals("App name should be correct", "PeopleScope", appName)
+
         val colorResources = listOf("black", "white")
         colorResources.forEach { colorName ->
             val colorId = resources.getIdentifier(colorName, "color", packageName)
             assertTrue("Color '$colorName' should exist", colorId != 0)
+        }
+    }
+
+    @Test
+    fun validateNavigationDestinations() {
+        try {
+            val destinationsClass = Class.forName("$packageName.presentation.navigation.Destinations")
+            assertNotNull("Destinations class should exist", destinationsClass)
+
+            val declaredClasses = destinationsClass.declaredClasses
+
+            val userListFound = declaredClasses.any {
+                it.simpleName == "UserList" || it.name.contains("UserList")
+            }
+            val userDetailFound = declaredClasses.any {
+                it.simpleName == "UserDetail" || it.name.contains("UserDetail")
+            }
+
+            assertTrue("UserList destination should exist", userListFound)
+            assertTrue("UserDetail destination should exist", userDetailFound)
+
+        } catch (e: ClassNotFoundException) {
+            fail("Navigation Destinations class not found: ${e.message}")
         }
     }
 
