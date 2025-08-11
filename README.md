@@ -92,6 +92,34 @@ android-studio .
 # Release build (optimized and obfuscated)
 ./gradlew assembleRelease
 ```
+## 📦 APK Downloads
+
+### 🤖 Automated Builds (GitHub Actions)
+
+Every push to `main` or `develop` automatically generates APKs that you can download:
+
+1. **Go to [Actions tab](../../actions)** in this repository
+2. **Click on the latest workflow run**
+3. **Scroll to "Artifacts" section**
+4. **Download your APK:**
+    - 📱 `debug-apk-XXX` - Debug version with logging
+    - 🚀 `release-apk-XXX` - Optimized release version
+
+### 🛠️ Manual Build Commands
+
+```bash
+# Debug APK (with logging and debugging features)
+./gradlew assembleDebug
+
+# Release APK (optimized and obfuscated) 
+./gradlew assembleRelease
+
+# Install directly to connected device
+./gradlew installDebug        # Install debug version
+./gradlew installRelease      # Install release version
+```
+
+**📁 APK Location:** `app/build/outputs/apk/debug/` or `app/build/outputs/apk/release/`
 
 ## 🧪 Testing Strategy
 
