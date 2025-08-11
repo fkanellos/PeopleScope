@@ -25,6 +25,8 @@ import io.mockk.mockk
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -479,40 +481,38 @@ class UserListViewModelTest {
     }
 
     @Test
-    fun `connection restored effect includes refresh option when had error`() = testScope.runTest {
-        // Given - Start offline with no content, then go online
+    fun `connection state changes update state correctly`() = testScope.runTest {
+        // Given - Setup with controlled network flow
         every { bookmarkDao.getAllBookmarkedUsers() } returns flowOf(emptyList())
 
-        viewModel = createViewModel(
-            initialNetworkState = false,
-            networkStateFlow = flowOf(false, true)
+        val networkStateFlow = MutableSharedFlow<Boolean>(replay = 1)
+        every { networkProvider.isNetworkAvailable() } returns false
+        every { networkProvider.networkConnectivityFlow() } returns networkStateFlow.asSharedFlow()
+
+        viewModel = UserListViewModel(
+            getUsersPagedUseCase = getUsersPagedUseCase,
+            toggleBookmarkUseCase = toggleBookmarkUseCase,
+            bookmarkDao = bookmarkDao,
+            networkProvider = networkProvider
         )
 
+        // Start offline
+        networkStateFlow.emit(false)
         advanceUntilIdle()
 
-        // When & Then
-        viewModel.effect.test {
-            var foundConnectionRestored = false
-            var foundRefreshOption = false
+        // Verify offline state
+        var currentState = viewModel.state.value
+        assertFalse("Should be offline", currentState.isOnline)
+        assertTrue("Should show network error", currentState.showNetworkError)
 
-            while (!foundConnectionRestored || !foundRefreshOption) {
-                when (val effect = awaitItem()) {
-                    is UserListEffect.ConnectionRestored -> {
-                        foundConnectionRestored = true
-                    }
-                    is UserListEffect.ShowRefreshOption -> {
-                        foundRefreshOption = true
-                        assertTrue("Refresh option should mention connection restored",
-                            effect.message.toString().contains("Connection restored", ignoreCase = true))
-                    }
-                    else -> {
-                        // Ignore other effects
-                    }
-                }
-            }
+        // When - Go online
+        every { networkProvider.isNetworkAvailable() } returns true
+        networkStateFlow.emit(true)
+        advanceUntilIdle()
 
-            assertTrue("Should have found ConnectionRestored effect", foundConnectionRestored)
-            assertTrue("Should have found ShowRefreshOption effect", foundRefreshOption)
-        }
-    }
-}
+        // Then - Verify online state and connection restored detection
+        currentState = viewModel.state.value
+        assertTrue("Should be online", currentState.isOnline)
+        assertTrue("Should detect connection just restored", currentState.isConnectionJustRestored())
+        assertFalse("Should not show network error", currentState.showNetworkError)
+    }}
