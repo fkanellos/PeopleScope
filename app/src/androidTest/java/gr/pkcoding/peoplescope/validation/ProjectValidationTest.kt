@@ -2,6 +2,12 @@ package gr.pkcoding.peoplescope.validation
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import gr.pkcoding.peoplescope.data.remote.api.RandomUserApi
+import gr.pkcoding.peoplescope.di.appModule
+import gr.pkcoding.peoplescope.di.dataModule
+import gr.pkcoding.peoplescope.di.domainModule
+import gr.pkcoding.peoplescope.di.presentationModule
+import gr.pkcoding.peoplescope.domain.repository.UserRepository
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -9,6 +15,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.koin.android.ext.koin.androidContext
+import org.koin.dsl.koinApplication
 
 /**
  * Complete project validation test that verifies:
@@ -262,22 +270,32 @@ class ProjectValidationTest {
 
     @Test
     fun validateDependencyInjection() {
-        try {
-            // Verify Koin modules exist
-            val modules = listOf(
-                "AppModule",
-                "DataModule",
-                "DomainModule",
-                "PresentationModule"
-            )
+        assertNotNull("appModule should exist", appModule)
+        assertNotNull("dataModule should exist", dataModule)
+        assertNotNull("domainModule should exist", domainModule)
+        assertNotNull("presentationModule should exist", presentationModule)
 
-            modules.forEach { moduleName ->
-                val moduleClass = Class.forName("$packageName.di.$moduleName")
-                assertNotNull("$moduleName should exist", moduleClass)
+        try {
+            val testKoin = koinApplication {
+                androidContext(InstrumentationRegistry.getInstrumentation().targetContext)
+                modules(
+                    appModule,
+                    dataModule,
+                    domainModule,
+                    presentationModule
+                )
             }
 
-        } catch (e: ClassNotFoundException) {
-            fail("DI modules not found: ${e.message}")
+            assertNotNull("Koin application should be created", testKoin)
+
+            val koin = testKoin.koin
+            assertTrue("Should be able to resolve RandomUserApi",
+                koin.getOrNull<RandomUserApi>() != null)
+            assertTrue("Should be able to resolve UserRepository",
+                koin.getOrNull<UserRepository>() != null)
+
+        } catch (e: Exception) {
+            fail("Koin modules validation failed: ${e.message}")
         }
     }
 
@@ -310,7 +328,7 @@ class ProjectValidationTest {
             componentClasses.forEach { componentName ->
                 try {
                     Class.forName("$packageName.presentation.ui.components.${componentName}Kt")
-                } catch (e: ClassNotFoundException) {
+                } catch (_: ClassNotFoundException) {
                     // Components might be in different files, this is acceptable
                 }
             }
@@ -381,8 +399,6 @@ class ProjectValidationTest {
 
     @Test
     fun validateBuildConfiguration() {
-        // This test verifies the app was built with correct configuration
-        val appInfo = context.applicationInfo
 
         // Verify minimum SDK version (should be 24+)
         assertTrue("Min SDK should be 24 or higher",

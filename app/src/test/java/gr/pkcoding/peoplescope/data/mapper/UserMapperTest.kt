@@ -1,9 +1,30 @@
 package gr.pkcoding.peoplescope.data.mapper
 
 import gr.pkcoding.peoplescope.data.local.entity.BookmarkedUserEntity
-import gr.pkcoding.peoplescope.data.remote.dto.*
-import gr.pkcoding.peoplescope.domain.model.*
-import org.junit.Assert.*
+import gr.pkcoding.peoplescope.data.remote.dto.CoordinatesDto
+import gr.pkcoding.peoplescope.data.remote.dto.DobDto
+import gr.pkcoding.peoplescope.data.remote.dto.IdDto
+import gr.pkcoding.peoplescope.data.remote.dto.LocationDto
+import gr.pkcoding.peoplescope.data.remote.dto.LoginDto
+import gr.pkcoding.peoplescope.data.remote.dto.NameDto
+import gr.pkcoding.peoplescope.data.remote.dto.PictureDto
+import gr.pkcoding.peoplescope.data.remote.dto.RegisteredDto
+import gr.pkcoding.peoplescope.data.remote.dto.StreetDto
+import gr.pkcoding.peoplescope.data.remote.dto.TimezoneDto
+import gr.pkcoding.peoplescope.data.remote.dto.UserDto
+import gr.pkcoding.peoplescope.domain.model.Coordinates
+import gr.pkcoding.peoplescope.domain.model.DateOfBirth
+import gr.pkcoding.peoplescope.domain.model.Location
+import gr.pkcoding.peoplescope.domain.model.Name
+import gr.pkcoding.peoplescope.domain.model.Picture
+import gr.pkcoding.peoplescope.domain.model.Street
+import gr.pkcoding.peoplescope.domain.model.Timezone
+import gr.pkcoding.peoplescope.domain.model.User
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
@@ -169,25 +190,6 @@ class UserMapperTest {
         // Then
         assertNotNull("User should not be null", user)
         assertNull("Blank email should be null", user!!.email)
-    }
-
-    @Test
-    fun `toDomainModels should filter out null users`() {
-        // Given
-        val userDtos = listOf(
-            validUserDto,
-            validUserDto.copy(login = LoginDto(null, "username", "password", "salt", "md5", "sha1", "sha256")), // Invalid
-            validUserDto.copy(name = NameDto("Mr", null, "Doe")), // Invalid
-            validUserDto.copy(login = LoginDto("uuid-2", "username", "password", "salt", "md5", "sha1", "sha256"))
-        )
-
-        // When
-        val users = userDtos.toDomainModels()
-
-        // Then
-        assertEquals("Should have 2 valid users", 2, users.size)
-        assertEquals("test-uuid", users[0].id)
-        assertEquals("uuid-2", users[1].id)
     }
 
     @Test

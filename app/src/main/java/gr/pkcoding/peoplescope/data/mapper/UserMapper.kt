@@ -1,8 +1,15 @@
 package gr.pkcoding.peoplescope.data.mapper
 
 import gr.pkcoding.peoplescope.data.local.entity.BookmarkedUserEntity
-import gr.pkcoding.peoplescope.data.remote.dto.*
-import gr.pkcoding.peoplescope.domain.model.*
+import gr.pkcoding.peoplescope.data.remote.dto.UserDto
+import gr.pkcoding.peoplescope.domain.model.Coordinates
+import gr.pkcoding.peoplescope.domain.model.DateOfBirth
+import gr.pkcoding.peoplescope.domain.model.Location
+import gr.pkcoding.peoplescope.domain.model.Name
+import gr.pkcoding.peoplescope.domain.model.Picture
+import gr.pkcoding.peoplescope.domain.model.Street
+import gr.pkcoding.peoplescope.domain.model.Timezone
+import gr.pkcoding.peoplescope.domain.model.User
 import timber.log.Timber
 
 /**
@@ -77,21 +84,6 @@ fun UserDto.toDomainModel(): User? {
         Timber.e(e, "Error mapping UserDto to User")
         null
     }
-}
-
-/**
- * Maps list of UserDto to list of domain User models
- */
-//todo delete?
-fun List<UserDto>.toDomainModels(): List<User> {
-    Timber.d("Mapping ${this.size} UserDto objects")
-
-    val users = this.mapNotNull { userDto ->
-        userDto.toDomainModel()
-    }
-
-    Timber.d("Successfully mapped ${users.size} out of ${this.size} users")
-    return users
 }
 
 /**

@@ -1,11 +1,35 @@
 package gr.pkcoding.peoplescope.presentation.ui.userdetail
 
 import androidx.activity.ComponentActivity
-import androidx.compose.runtime.*
+import androidx.annotation.StringRes
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
-import androidx.compose.ui.test.*
+import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasProgressBarRangeInfo
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import gr.pkcoding.peoplescope.domain.model.*
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
+import androidx.test.platform.app.InstrumentationRegistry
+import gr.pkcoding.peoplescope.R
+import gr.pkcoding.peoplescope.domain.model.Coordinates
+import gr.pkcoding.peoplescope.domain.model.DateOfBirth
+import gr.pkcoding.peoplescope.domain.model.Location
+import gr.pkcoding.peoplescope.domain.model.Name
+import gr.pkcoding.peoplescope.domain.model.Picture
+import gr.pkcoding.peoplescope.domain.model.Street
+import gr.pkcoding.peoplescope.domain.model.Timezone
+import gr.pkcoding.peoplescope.domain.model.User
 import gr.pkcoding.peoplescope.presentation.UiText
 import gr.pkcoding.peoplescope.ui.theme.PeopleScopeTheme
 import org.junit.Rule
@@ -37,6 +61,11 @@ class UserDetailScreenUITest {
         nationality = "US",
         isBookmarked = false
     )
+    private val testContext = InstrumentationRegistry.getInstrumentation().targetContext
+
+    private fun getString(@StringRes resId: Int, vararg formatArgs: Any): String {
+        return testContext.getString(resId, *formatArgs)
+    }
 
     @Test
     fun userDetailScreen_displaysUserInformation() {
@@ -190,7 +219,6 @@ class UserDetailScreenUITest {
             }
         }
 
-        // ✅ Check for CircularProgressIndicator instead of test tag
         composeTestRule
             .onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate))
             .assertExists()
@@ -205,7 +233,7 @@ class UserDetailScreenUITest {
                         user = null,
                         isBookmarked = false,
                         isLoading = false,
-                        error = UiText.DynamicString("User not found")
+                        error = UiText.StringResource(R.string.error_unknown)
                     ),
                     onIntent = {},
                     onNavigateBack = {}
@@ -213,16 +241,20 @@ class UserDetailScreenUITest {
             }
         }
 
-        // Check if error message is displayed
-        composeTestRule
-            .onNodeWithText("User not found")
-            .assertIsDisplayed()
+        composeTestRule.waitForIdle()
 
-        // Check if retry button is displayed
         composeTestRule
-            .onNodeWithText("Retry")
+            .onNodeWithText(getString(R.string.retry_with_icon), substring = true)
             .assertIsDisplayed()
             .assertHasClickAction()
+
+        composeTestRule
+            .onNodeWithText(getString(R.string.error_unknown), substring = true)
+            .assertIsDisplayed()
+
+        composeTestRule
+            .onNodeWithText(getString(R.string.user_details_title))
+            .assertIsDisplayed()
     }
 
     @Test

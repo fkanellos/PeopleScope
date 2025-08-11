@@ -97,7 +97,7 @@ private fun NetworkErrorBar(
         iconColor = MaterialTheme.colorScheme.error,
         title = stringResource(R.string.no_internet_short),
         subtitle = stringResource(R.string.check_connection),
-        actionText = stringResource(R.string.retry),
+        actionText = stringResource(R.string.retry_with_icon),
         onActionClick = onRetryClick
     )
 }
