@@ -13,5 +13,5 @@
 /.externalNativeBuild/
 /cxx/
 
-# Local properties (διπλής εγγραφής γιατί συχνά γράφονται και με και χωρίς /)
+# Local properties
 local.properties
